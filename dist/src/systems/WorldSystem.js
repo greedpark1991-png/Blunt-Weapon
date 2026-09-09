@@ -5,7 +5,7 @@ const expanded=(r,pad)=>({x:r.x-pad,y:r.y-pad,w:r.w+pad*2,h:r.h+pad*2});
 const inside=(x,y,r)=>x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h;
 
 export class WorldSystem{
-  constructor(){this.bounds={...SHOP_BOUNDS};this.colliders=SHOP_COLLIDERS.map(x=>({...x}));this.zones=SHOP_ZONES;this.cell=12;}
+  constructor(config={}){const bounds=config.bounds||SHOP_BOUNDS,colliders=config.colliders||SHOP_COLLIDERS,zones=config.zones||SHOP_ZONES;this.bounds={...bounds};this.colliders=colliders.map(x=>({...x}));this.zones=zones;this.cell=config.cell||12;}
   zoneRect(zone){return typeof zone==='string'?this.zones[zone]||null:zone||null;}
   limits(zone=null,pad=7){const z=this.zoneRect(zone);if(!z)return{left:this.bounds.left+pad,right:this.bounds.right-pad,top:this.bounds.top+pad,bottom:this.bounds.bottom-pad};return{left:Math.max(this.bounds.left+pad,z.x+pad),right:Math.min(this.bounds.right-pad,z.x+z.w-pad),top:Math.max(this.bounds.top+pad,z.y+pad),bottom:Math.min(this.bounds.bottom-pad,z.y+z.h-pad)};}
   collides(x,y,pad=7,ignore=[]){return this.colliders.some(r=>!ignore.includes(r.id)&&inside(x,y,expanded(r,pad)));}

@@ -1,13 +1,13 @@
 {
-  "name": "blacksmith-brothers-v0.2.5",
-  "version": "0.2.5",
+  "name": "blacksmith-brothers-v0.2.5b",
+  "version": "0.2.5-b",
   "private": true,
   "type": "module",
-  "description": "중세 판타지 형제 대장장이 생활형 경영게임 V0.2.5 - 공간/충돌/키보드 UX/명성/단골 개선",
+  "description": "중세 판타지 형제 대장장이 V0.2.5b - 1층 동선/작업 안내/2층 생활공간 리디자인",
   "scripts": {
     "dev": "node scripts/dev-server.mjs",
     "build": "node scripts/build.mjs",
     "preview": "node scripts/preview-server.mjs",
-    "test": "node tests/systems.test.mjs && node tests/ux.test.mjs && node tests/scene-smoke.test.mjs"
+    "test": "node tests/systems.test.mjs && node tests/ux.test.mjs && node tests/scene-smoke.test.mjs && node tests/layout-hotfix.test.mjs && node tests/stability-followup.test.mjs"
   }
 }

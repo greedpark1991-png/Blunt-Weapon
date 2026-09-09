@@ -1,13 +1,13 @@
 const ZONES={
-  FORGE_DIRT_ZONE:{x:132,y:204,w:90,h:28,types:['재','검댕','석탄 부스러기']},
-  ANVIL_DIRT_ZONE:{x:222,y:202,w:80,h:34,types:['철가루','금속 조각']},
-  WATER_DIRT_ZONE:{x:296,y:204,w:64,h:28,types:['물자국','철 부스러기']},
-  GRIND_DIRT_ZONE:{x:318,y:278,w:78,h:34,types:['숫돌 가루','금속 가루']},
-  ENTRANCE_DIRT_ZONE:{x:522,y:298,w:72,h:22,types:['흙','진흙','발자국']},
-  WORKBENCH_DIRT_ZONE:{x:166,y:274,w:130,h:36,types:['나무 부스러기','가죽 조각']},
-  COUNTER_DIRT_ZONE:{x:460,y:296,w:86,h:24,types:['종이 조각','먼지']},
-  STAIR_DIRT_ZONE:{x:38,y:260,w:44,h:48,types:['먼지']},
-  GENERAL_FLOOR_ZONE:{x:300,y:286,w:106,h:34,types:['먼지']},
+  FORGE_DIRT_ZONE:{x:126,y:190,w:92,h:30,types:['재','검댕','석탄 부스러기']},
+  ANVIL_DIRT_ZONE:{x:220,y:188,w:72,h:32,types:['철가루','금속 조각']},
+  WATER_DIRT_ZONE:{x:290,y:190,w:64,h:28,types:['물자국','철 부스러기']},
+  GRIND_DIRT_ZONE:{x:326,y:272,w:76,h:36,types:['숫돌 가루','금속 가루']},
+  ENTRANCE_DIRT_ZONE:{x:538,y:294,w:58,h:24,types:['흙','진흙','발자국']},
+  WORKBENCH_DIRT_ZONE:{x:176,y:268,w:138,h:38,types:['나무 부스러기','가죽 조각']},
+  COUNTER_DIRT_ZONE:{x:414,y:292,w:92,h:26,types:['종이 조각','먼지']},
+  STAIR_DIRT_ZONE:{x:80,y:254,w:48,h:42,types:['먼지']},
+  GENERAL_FLOOR_ZONE:{x:286,y:286,w:112,h:34,types:['먼지']},
 };
 const ACTIVITY_ZONE={forge:'FORGE_DIRT_ZONE',anvil:'ANVIL_DIRT_ZONE',water:'WATER_DIRT_ZONE',grind:'GRIND_DIRT_ZONE',bench:'WORKBENCH_DIRT_ZONE',customers:'ENTRANCE_DIRT_ZONE',counter:'COUNTER_DIRT_ZONE',stairs:'STAIR_DIRT_ZONE'};
 export class MaintenanceSystem{

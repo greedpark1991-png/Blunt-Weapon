@@ -19,7 +19,7 @@ const buyer=s.customer.spawn({type:'villager',name:'테스트 주민',customerId
 s.customer.visitors=[];s.child.visible=true;s.child.x=414;s.child.y=218;const rude=s.customer.spawn({type:'rude',name:'진상 테스트',mode:'direct',itemId:'shield',preferences:['shield'],budget:.9,patience:200,rude:true,line:'비싸다'},700);rude.status='ordered';rude.acceptedItem='shield';rude.x=s.players.younger.x+30;rude.y=s.players.younger.y;s.broomEquipped=true;s.startBroomAttack(rude);s.updateCutscene(.6);assert.equal(rude.status,'leaving');assert.equal(s.child.visible,true);assert.ok(rude.fleeSpeed>100);
 
 // CLOSED shop may end the day early; OPEN shop may not.
-s.customer.visitors=[];s.cutscene=null;s.broomEquipped=false;s.goUpstairs();s.time.minute=795;s.shopOpen=true;s.useBed();assert.ok(s.ui.modal);assert.ok(s.ui.modal.text.includes('영업 중'));s.ui.closeModal();s.shopOpen=false;s.useBed();assert.ok(s.ui.modal);assert.ok(s.ui.modal.text.includes('13:15'));s.ui.choose(0);assert.ok(s.ui.modal); // day summary
+s.customer.visitors=[];s.cutscene=null;s.broomEquipped=false;s.stairCooldown=0;s.goUpstairs();assert.equal(s.floor,'loft');s.time.minute=795;s.shopOpen=true;s.useBed();assert.ok(s.ui.modal);assert.ok(s.ui.modal.text.includes('영업 중'));s.ui.closeModal();s.shopOpen=false;s.useBed();assert.ok(s.ui.modal);assert.ok(s.ui.modal.text.includes('13:15'));s.ui.choose(0);assert.ok(s.ui.modal); // day summary
 s.ui.choose(0);assert.equal(s.day,2);assert.equal(Math.floor(s.time.minute),360);assert.equal(s.shopOpen,false);assert.equal(s.floor,'loft');assert.ok(s.ui.modal); // morning news
 
 // Renown promotion and regular data are actual world progression, not a detached number.
@@ -30,4 +30,4 @@ s.shopOpen=true;s.economy.gold=777;s.economy.reputation=27;s.inventory.materials
 
 // New depth-sorted renderer must render without runtime errors.
 restored.render(ctx);
-console.log('✓ V0.2.5 scene integration/early-sleep/renown tests passed');
+console.log('✓ V0.2.5b scene integration/early-sleep/renown tests passed');

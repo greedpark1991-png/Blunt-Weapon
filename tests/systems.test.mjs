@@ -46,7 +46,7 @@ const eco=new Economy();const item={...finished.item,itemId:'sword',basePrice:IT
 for(const ip of Object.values(INTERACTION_POINTS))assert.ok(world.isWalkable(ip.x,ip.y,null,7),`interaction point should be walkable: ${JSON.stringify(ip)}`);
 const p=new Player('younger',174,220); // directly below forge interaction point
 for(let i=0;i<90;i++)world.moveEntity(p,0,-3,null,7);
-assert.ok(p.y>=207,'player must not enter forge footprint from below');
+assert.ok(p.y>=193,'player must not enter forge footprint from below');
 const wallP=new Player('younger',400,180);for(let i=0;i<100;i++)world.moveEntity(wallP,0,-5,null,7);assert.ok(wallP.y>=149,'north wall boundary must stop spider-man movement');
 for(const c of SHOP_COLLIDERS)assert.ok(!world.isWalkable(c.x+c.w/2,c.y+c.h/2,null,7),`${c.id} footprint should block movement`);
 const path=world.findPath({x:350,y:300},INTERACTION_POINTS.forge,null,7);assert.ok(path.length);assert.ok(path.every(pt=>world.isWalkable(pt.x,pt.y,null,7)));
@@ -68,4 +68,4 @@ for(const v of cs.visitors)assert.ok(world.isWalkable(v.x,v.y,'CUSTOMER_ZONE',6)
 
 assert.equal(RenownSystem.tier(0).name,'무명의 대장간');assert.equal(RenownSystem.tier(10).name,'동네에서 소문난 대장간');assert.equal(RenownSystem.tier(25).name,'마을의 유명 대장간');assert.equal(RenownSystem.tier(120).name,'이름난 형제 대장장이');assert.ok(RenownSystem.specialPool(80).length>=3);
 
-console.log('✓ V0.2.5 systems/collision/pathfinding tests passed');
+console.log('✓ V0.2.5b systems/collision/pathfinding tests passed');

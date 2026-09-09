@@ -87,58 +87,83 @@ export const MATERIAL_NAMES = { iron:'철', wood:'목재', leather:'가죽' };
 export const FUEL_TYPES={wood:{id:'wood',name:'장작'},coal:{id:'coal',name:'석탄'}};
 
 export const STATIONS = {
-  // V0.2.5: left/top work zone is dense; right/bottom customer zone stays open.
-  stairs:  { x:18,  y:148, w:58, h:104, label:'2층 계단' },
-  fuel:    { x:82,  y:148, w:44, h:44, label:'장작·석탄' },
-  forge:   { x:132, y:140, w:84, h:60, label:'화로' },
-  anvil:   { x:230, y:158, w:58, h:38, label:'모루' },
-  water:   { x:302, y:164, w:50, h:34, label:'담금질 통' },
-  bench:   { x:176, y:218, w:112,h:48, label:'큰 작업대' },
-  storage: { x:78,  y:254, w:84, h:52, label:'재료 창고' },
-  grind:   { x:326, y:226, w:64, h:48, label:'숫돌' },
+  // V0.2.5b: the hot-work line hugs the north wall; customer circulation stays open on the right.
+  stairs:  { x:18,  y:146, w:58, h:104, label:'2층 계단' },
+  fuel:    { x:80,  y:128, w:44, h:44, label:'장작·석탄' },
+  forge:   { x:130, y:126, w:84, h:60, label:'화로' },
+  anvil:   { x:226, y:140, w:58, h:38, label:'모루' },
+  water:   { x:294, y:146, w:52, h:34, label:'담금질 통' },
+  bench:   { x:188, y:205, w:120,h:50, label:'큰 작업대' },
+  storage: { x:46,  y:270, w:92, h:52, label:'재료 창고' },
+  grind:   { x:332, y:218, w:64, h:48, label:'숫돌' },
   display: { x:510, y:82,  w:82, h:62, label:'판매 진열대' },
-  counter: { x:426, y:254, w:132,h:34, label:'판매 카운터' },
-  broom:   { x:382, y:292, w:34, h:40, label:'빗자루' },
-  sign:    { x:568, y:286, w:38, h:38, label:'영업 표지판' },
-  door:    { x:558, y:326, w:58, h:28, label:'출입구' },
+  counter: { x:398, y:250, w:132,h:34, label:'판매 카운터' },
+  broom:   { x:354, y:292, w:34, h:40, label:'빗자루' },
+  sign:    { x:534, y:286, w:30, h:36, label:'영업 표지판' },
+  door:    { x:568, y:326, w:46, h:28, label:'출입구' },
 };
 
 export const SHOP_BOUNDS={left:34,right:606,top:142,bottom:326};
 export const SHOP_ZONES={
-  WORK_ZONE:{x:34,y:142,w:374,h:184},
+  WORK_ZONE:{x:34,y:142,w:370,h:184},
   CUSTOMER_ZONE:{x:410,y:148,w:196,h:178},
-  CHILD_SAFE_ZONE:{x:352,y:188,w:190,h:116},
+  CHILD_SAFE_ZONE:{x:388,y:188,w:158,h:116},
 };
-// Footprints are intentionally smaller than the visual sprites. They describe floor occupancy.
+// Footprints describe the floor occupied by furniture, not the whole sprite.
 export const SHOP_COLLIDERS=[
-  {id:'stairs',x:18,y:190,w:58,h:62},
-  {id:'fuel',x:82,y:169,w:44,h:23},
-  {id:'forge',x:132,y:171,w:84,h:29},
-  {id:'anvil',x:230,y:178,w:58,h:18},
-  {id:'water',x:302,y:181,w:50,h:17},
-  {id:'bench',x:176,y:238,w:112,h:28},
-  {id:'storage',x:78,y:276,w:84,h:30},
-  {id:'grind',x:326,y:250,w:64,h:24},
-  {id:'counterTop',x:426,y:263,w:132,h:25},
-  {id:'counterLeg',x:426,y:284,w:30,h:42},
+  {id:'stairs',x:18,y:188,w:58,h:62},
+  {id:'fuel',x:80,y:151,w:44,h:21},
+  {id:'forge',x:130,y:155,w:84,h:31},
+  {id:'anvil',x:226,y:157,w:58,h:21},
+  {id:'water',x:294,y:163,w:52,h:17},
+  {id:'bench',x:188,y:226,w:120,h:29},
+  {id:'storage',x:46,y:294,w:92,h:28},
+  {id:'grind',x:332,y:242,w:64,h:24},
+  {id:'counterTop',x:398,y:259,w:132,h:25},
+  // Vertical leg moved to the RIGHT. Staff can enter the inside from the left without using the customer door.
+  {id:'counterLeg',x:500,y:280,w:30,h:42},
   {id:'display',x:510,y:126,w:82,h:18},
 ];
 export const INTERACTION_POINTS={
-  stairs:{x:85,y:230},fuel:{x:108,y:204},forge:{x:174,y:212},anvil:{x:259,y:211},water:{x:327,y:212},
-  bench:{x:232,y:282},storage:{x:122,y:319},grind:{x:358,y:288},display:{x:548,y:158},counter:{x:486,y:244},
-  broom:{x:398,y:286},sign:{x:576,y:304},door:{x:586,y:318},
+  stairs:{x:88,y:238},fuel:{x:102,y:191},forge:{x:172,y:198},anvil:{x:255,y:193},water:{x:320,y:194},
+  bench:{x:248,y:270},storage:{x:152,y:310},grind:{x:364,y:282},display:{x:548,y:158},counter:{x:464,y:238},
+  broom:{x:372,y:286},sign:{x:548,y:306},door:{x:590,y:318},
 };
 
 export const LOFT_STATIONS = {
-  olderBed:   { x:82,  y:176, w:112, h:52, label:'형의 침대' },
-  youngerBed: { x:224, y:176, w:112, h:52, label:'동생의 침대' },
-  table:      { x:366, y:170, w:74, h:50, label:'작은 테이블' },
-  wardrobe:   { x:66,  y:76,  w:66, h:72, label:'수납장' },
-  window:     { x:266, y:58,  w:90, h:56, label:'창문' },
-  lamp:       { x:438, y:82,  w:34, h:54, label:'등불' },
+  // V0.2.5b: beds belong to opposite walls; the right-side stair landing matches the left-wall stair below.
+  olderBed:   { x:48,  y:186, w:120, h:52, label:'형의 침대' },
+  youngerBed: { x:438, y:186, w:120, h:52, label:'동생의 침대' },
+  table:      { x:286, y:158, w:72, h:50, label:'공용 테이블' },
+  wardrobe:   { x:60,  y:76,  w:66, h:72, label:'수납장' },
+  window:     { x:274, y:58,  w:90, h:56, label:'창문' },
+  lamp:       { x:378, y:82,  w:34, h:54, label:'등불' },
   stairsDown: { x:520, y:258, w:84, h:64, label:'1층 계단' },
 };
 
+
+export const LOFT_BOUNDS={left:34,right:606,top:146,bottom:326};
+export const LOFT_ZONES={
+  LIVING_ZONE:{x:34,y:146,w:572,h:180},
+};
+// 2F furniture footprints: beds/chests/table/stair landing occupy real floor space.
+export const LOFT_COLLIDERS=[
+  {id:'olderBed',x:48,y:207,w:120,h:31},
+  {id:'youngerBed',x:438,y:207,w:120,h:31},
+  {id:'table',x:286,y:180,w:72,h:28},
+  {id:'olderChest',x:54,y:258,w:62,h:22},
+  {id:'youngerChest',x:470,y:258,w:48,h:18},
+  {id:'stairsDown',x:536,y:286,w:60,h:36},
+];
+export const LOFT_INTERACTION_POINTS={
+  olderBed:{x:182,y:225},
+  youngerBed:{x:424,y:225},
+  table:{x:322,y:222},
+  wardrobe:{x:126,y:160},
+  window:{x:320,y:160},
+  lamp:{x:412,y:160},
+  stairsDown:{x:502,y:294},
+};
 
 export const TRAITS = {
   blade: [

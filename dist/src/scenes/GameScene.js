@@ -16,28 +16,28 @@ import { RentSystem } from '../systems/RentSystem.js';
 import { WorldSystem } from '../systems/WorldSystem.js';
 import { RenownSystem } from '../systems/RenownSystem.js';
 import { UIManager } from '../ui/UIManager.js';
-import { ITEMS, ITEM_ORDER, QUALITY, BROTHERS, CHILD_LINES, STATIONS, LOFT_STATIONS, MATERIAL_NAMES, RUDE_TYPES, INTERACTION_POINTS, demandMultiplier, stationName } from '../data/GameData.js';
+import { ITEMS, ITEM_ORDER, QUALITY, BROTHERS, CHILD_LINES, STATIONS, LOFT_STATIONS, MATERIAL_NAMES, RUDE_TYPES, INTERACTION_POINTS, LOFT_INTERACTION_POINTS, LOFT_BOUNDS, LOFT_COLLIDERS, LOFT_ZONES, demandMultiplier, stationName } from '../data/GameData.js';
 import { renderShopBase, getShopDrawables, renderLoft, renderLighting, drawDirt, drawCharacter } from '../utils/render.js';
 import { TitleScene } from './TitleScene.js';
 
 export class GameScene {
   constructor(game,payload={}){
-    this.game=game;this.t=0;const s=payload.save||{};this.world=new WorldSystem();
+    this.game=game;this.t=0;const s=payload.save||{};this.world=new WorldSystem();this.loftWorld=new WorldSystem({bounds:LOFT_BOUNDS,colliders:LOFT_COLLIDERS,zones:LOFT_ZONES});
     this.day=s.day??1;this.calendar=new CalendarSystem(s.calendar,this.day);this.rent=new RentSystem(s.rent);this.time=new TimeSystem(s.time);this.shopOpen=s.shopOpen??false;
     this.inventory=new Inventory(s.inventory);this.display=new DisplaySystem(s.display);this.orders=new OrderSystem(s.orders);this.maintenance=new MaintenanceSystem(s.maintenance);
     this.economy=new Economy({gold:s.gold,reputation:s.reputation,dayStats:s.dayStats});this.events=new EventSystem({activeEvent:s.activeEvent,nextEvent:s.nextEvent});this.crafting=new CraftingSystem({active:s.crafting?.active});this.brotherWork=new BrotherWorkSystem(s.brotherWork);
     this.weaponHistory=s.weaponHistory?[...s.weaponHistory]:[];this.customerHistory=s.customerHistory?[...s.customerHistory]:[];this.customerProfiles=JSON.parse(JSON.stringify(s.customerProfiles||{}));this.debts={...(s.debts||{})};this.recentRudeTypes=[...(s.recentRudeTypes||[])];this.renownTier=s.renownTier??RenownSystem.tierIndex(s.reputation??0);this.kidFlags={visits:0,gifts:0,rumors:0,apprenticeHint:false,...(s.kidFlags||{})};this.knightPurchase=s.knightPurchase||null;this.flags={knightSeen:false,rudeSeen:false,rudeEver:false,...(s.flags||{})};this.controlled=s.controlled||'younger';this.playTimeSeconds=s.playTimeSeconds||0;this.loadedSlot=payload.loadedSlot||null;
     const newGame=!!payload.newGame,defaultFloor=newGame?'loft':'shop';this.floor=s.floor||defaultFloor;this.playerFloors={older:s.playerFloors?.older||defaultFloor,younger:s.playerFloors?.younger||defaultFloor};
-    const olderDefault=this.playerFloors.older==='loft'?{x:144,y:250}:{x:308,y:300},youngerDefault=this.playerFloors.younger==='loft'?{x:286,y:250}:{x:350,y:300};
+    const olderDefault=this.playerFloors.older==='loft'?{x:150,y:252}:{x:308,y:300},youngerDefault=this.playerFloors.younger==='loft'?{x:430,y:252}:{x:350,y:300};
     this.players={older:new Player('older',s.players?.older?.x??olderDefault.x,s.players?.older?.y??olderDefault.y),younger:new Player('younger',s.players?.younger?.x??youngerDefault.x,s.players?.younger?.y??youngerDefault.y)};
-    for(const id of ['older','younger'])if(this.playerFloors[id]==='shop'){const safe=this.world.nearestWalkable(this.players[id].x,this.players[id].y,null,7);this.players[id].x=safe.x;this.players[id].y=safe.y;}
-    this.customer=new CustomerSystem(this.day,this.stateForData(),s.customer);this.merchant=new NPC('merchant','재료 상인',516,312);this.merchantVisible=false;this.merchantActiveVisit=null;this.merchantSeenVisits=new Set(s.merchantSeenVisits||[]);
+    for(const id of ['older','younger']){const w=this.playerFloors[id]==='shop'?this.world:this.loftWorld;const safe=w.nearestWalkable(this.players[id].x,this.players[id].y,null,7);this.players[id].x=safe.x;this.players[id].y=safe.y;}
+    this.customer=new CustomerSystem(this.day,this.stateForData(),s.customer);this.merchant=new NPC('merchant','재료 상인',590,350);this.merchantVisible=false;this.merchantActiveVisit=null;this.merchantSeenVisits=new Set(s.merchantSeenVisits||[]);this.merchantVisitId=null;this.merchantArrived=false;
     this.child=new NPC('child','후드 꼬마',586,318);this.child.visible=s.child?.visible??false;this.child.x=s.child?.x??586;this.child.y=s.child?.y??318;this.childSpawned=s.child?.spawned??false;this.childLeaveAt=s.child?.leaveAt??0;this.childWillVisit=s.child?.willVisit??(((this.day*47+13)%100)<45);
-    this.broomEquipped=s.broomEquipped??false;this.ui=new UIManager();this.cutscene=null;this.closingNotified=s.closingNotified??false;this.morningShown=s.morningShown??false;this.autoSaveT=0;this.pendingForcedSleep=false;this.showTutorial=newGame||!s.tutorialSeen;
+    this.broomEquipped=s.broomEquipped??false;this.ui=new UIManager();this.cutscene=null;this.closingNotified=s.closingNotified??false;this.morningShown=s.morningShown??false;this.autoSaveT=0;this.pendingForcedSleep=false;this.stairCooldown=0;this.trackerCache='';this.showTutorial=newGame||!s.tutorialSeen;
   }
   init(){
     if(this.showTutorial){
-      this.ui.openModal('V0.2.5 · 사람이 살아가는 대장간','공간 충돌과 작업 동선을 다시 만들었다. 작업 구역과 손님 구역이 나뉘고, 키보드 메뉴·조기 취침·명성·단골·다양한 오염과 꼬마 소문 시스템이 추가되었다.',[{label:'아침 시작'}],()=>{this.showTutorial=false;this.save(true);this.showMorningNews();});
+      this.showTracker(true);this.ui.openModal('V0.2.5b · 생활공간 안정화','V0.2.5a의 동선/생활공간을 유지하면서 2층 가구 충돌, 계단 랜딩, 좁은 화면 작업 안내를 추가 안정화했다.',[{label:'아침 시작'}],()=>{this.showTutorial=false;this.save(true);this.showMorningNews();});
     }else if(!this.morningShown)this.showMorningNews();
   }
   stateForData(){return{knightPurchase:this.knightPurchase,activeEvent:this.events.activeEvent,customerHistory:this.customerHistory,customerProfiles:this.customerProfiles,debts:this.debts,recentRudeTypes:this.recentRudeTypes,rudeEver:this.flags.rudeEver,reputation:this.economy?.reputation??0};}
@@ -48,7 +48,7 @@ export class GameScene {
     this.ui.openModal(`${this.calendar.format()} · 오늘의 소식`,`${this.events.newsText()} ${cond}${finance} 지금은 ${this.time.format()}. 아침 06:00~08:00 사이 재료 상인이 반드시 한 번 방문한다.`,[{label:'확인'}],()=>this.save());
   }
   update(dt){
-    this.t+=dt;this.ui.update(dt);const input=this.game.input;let openedPause=false;
+    this.t+=dt;this.stairCooldown=Math.max(0,this.stairCooldown-dt);this.ui.update(dt);this.updateTrackerPanel();const input=this.game.input;let openedPause=false;
     if(input.hit('Escape')&&!this.ui.isPauseOpen()){
       if(this.ui.shop){this.ui.closeShop();return;}
       if(this.ui.modal){this.ui.closeModal();return;}
@@ -62,7 +62,7 @@ export class GameScene {
     const clockPaused=this.ui.isWorldPaused();
     if(!clockPaused){
       this.playTimeSeconds+=dt;
-      const before=this.time.minute;this.time.update(dt);this.maintenance.update(this.time.minute-before,(x,y)=>this.world.isWalkable(x,y,null,6));this.updateShopTime();this.updateMerchant();this.updateChild(dt);this.updateCustomers(dt);this.updateCutscene(dt);
+      const before=this.time.minute;this.time.update(dt);this.maintenance.update(this.time.minute-before,(x,y)=>this.world.isWalkable(x,y,null,6));this.updateShopTime();this.updateMerchant(dt);this.updateChild(dt);this.updateCustomers(dt);this.updateCutscene(dt);
       const workEvents=this.brotherWork.update(dt,this.players,this.world);this.handleBrotherWorkEvents(workEvents);
       for(const v of this.customer.visitors){if(v.bubbleT>0){v.bubbleT-=dt;if(v.bubbleT<=0)v.bubble='';}if(v.hitStarT>0)v.hitStarT-=dt;}
       this.autoSaveT+=dt;if(this.autoSaveT>=20){this.autoSaveT=0;this.save();}
@@ -74,7 +74,7 @@ export class GameScene {
     if(input.hit('KeyI')){this.openInventory();return;}
     if(input.hit('KeyC')){this.openCalendar();return;}
     if(input.hit('KeyQ')){this.switchBrother();return;}
-    this.players.older.update(dt,input,this.controlled==='older'&&this.playerFloors.older===this.floor,this.playerFloors.older==='shop'?this.world:null,null);this.players.younger.update(dt,input,this.controlled==='younger'&&this.playerFloors.younger===this.floor,this.playerFloors.younger==='shop'?this.world:null,null);
+    this.players.older.update(dt,input,this.controlled==='older'&&this.playerFloors.older===this.floor,this.playerFloors.older==='shop'?this.world:this.loftWorld,null);this.players.younger.update(dt,input,this.controlled==='younger'&&this.playerFloors.younger===this.floor,this.playerFloors.younger==='shop'?this.world:this.loftWorld,null);
     if(input.hit('KeyE','Enter'))this.interact();
   }
   handleBrotherWorkEvents(events){
@@ -110,12 +110,20 @@ export class GameScene {
     const afternoon=afternoonEnabled?{id:`${this.day}-afternoon`,period:'afternoon',start:afternoonStart,end:Math.min(1080,afternoonStart+135),sale:this.merchantSale('afternoon')}:null;
     return afternoon?[morning,afternoon]:[morning];
   }
-  updateMerchant(){
+  updateMerchant(dt=0){
     const visit=this.merchantSchedule().find(v=>this.time.minute>=v.start&&this.time.minute<=v.end)||null;
+    const changed=visit?.id!==this.merchantVisitId;
     this.merchantActiveVisit=visit;this.merchantVisible=!!visit;
-    if(visit&&!this.merchantSeenVisits.has(visit.id)){
+    if(visit&&changed){this.merchantVisitId=visit.id;this.merchant.x=590;this.merchant.y=350;this.merchantArrived=false;delete this.merchant._merchantNav;}
+    if(!visit){this.merchantVisitId=null;this.merchantArrived=false;delete this.merchant._merchantNav;return;}
+    // First cross the visible doorway from outside, then use normal customer-zone pathing.
+    if(!this.merchantArrived){
+      if(this.merchant.y>320){this.merchant.y=Math.max(320,this.merchant.y-78*dt);}
+      else{const reached=this.world.followPath(this.merchant,{x:548,y:304},dt,60,'CUSTOMER_ZONE',6,'_merchantNav');if(reached||Math.hypot(this.merchant.x-548,this.merchant.y-304)<4)this.merchantArrived=true;}
+    }
+    if(!this.merchantSeenVisits.has(visit.id)){
       this.merchantSeenVisits.add(visit.id);this.game.sound.door();const sale=visit.sale?` · SALE ${visit.sale.label}`:'';
-      this.ui.showToast(`재료 상인이 왔다. ${this.time.format(visit.end)}쯤까지 머문다${sale}`);this.save();
+      this.ui.showToast(`재료 상인이 문을 열고 들어왔다. ${this.time.format(visit.end)}쯤까지 머문다${sale}`);this.save();
     }
   }
   childWindow(){const start=620+(this.day*31)%115;return{start,end:start+150};}
@@ -201,7 +209,7 @@ export class GameScene {
     const near=Object.entries(STATIONS).map(([id,st])=>{const ip=INTERACTION_POINTS[id]||{x:st.x+st.w/2,y:st.y+st.h/2};return{id,s:st,d:this.dist(ip.x,ip.y)};}).sort((a,b)=>a.d-b.d)[0];if(!near||near.d>60){this.ui.showToast(this.broomEquipped?'빗자루를 들고 있다. 진상이나 먼지 가까이에서 E를 누르자.':'상호작용할 대상이 가까이 없다.');return;}this.useStation(near.id);
   }
   interactLoft(){
-    const near=Object.entries(LOFT_STATIONS).map(([id,s])=>({id,s,d:this.dist(s.x+s.w/2,s.y+s.h/2)})).sort((a,b)=>a.d-b.d)[0];if(!near||near.d>62){this.ui.showToast('2층 생활공간이다. 침대나 계단 가까이에서 E를 누르자.');return;}this.useLoftStation(near.id);
+    const near=Object.entries(LOFT_STATIONS).map(([id,s])=>{const ip=LOFT_INTERACTION_POINTS[id]||{x:s.x+s.w/2,y:s.y+s.h/2};return{id,s,d:this.dist(ip.x,ip.y)};}).sort((a,b)=>a.d-b.d)[0];if(!near||near.d>62){this.ui.showToast('2층 생활공간이다. 침대나 계단 가까이에서 E를 누르자.');return;}this.useLoftStation(near.id);
   }
   startBroomAttack(v){
     if(!v?.rude){this.ui.showToast('진상 상태의 손님에게만 빗자루 퇴치가 가능하다.');return;}
@@ -323,15 +331,15 @@ export class GameScene {
   useLoftStation(id){
     if(id==='stairsDown'){this.goDownstairs();return;}if(id==='olderBed'||id==='youngerBed'){this.useBed();return;}
     if(id==='wardrobe'){this.ui.showToast('형제의 작업복과 낡은 외투가 걸려 있다.');return;}
-    if(id==='table'){this.ui.showToast('작은 식탁 위에 빵 부스러기와 작업 메모가 남아 있다.');return;}
+    if(id==='table'){this.ui.showToast('창 아래 공용 테이블. 술잔 두 개와 빵, 촛대, 주사위가 놓여 있다. 오래 같이 산 흔적이 느껴진다.');return;}
     if(id==='window'){this.ui.showToast('창 아래로 대장간 입구와 지나가는 사람들이 보인다.');return;}
     if(id==='lamp'){this.ui.showToast('조용한 등불이 2층 생활공간을 따뜻하게 밝힌다.');return;}
   }
   goUpstairs(){
-    this.playerFloors[this.controlled]='loft';this.floor='loft';const p=this.controlledPlayer();p.x=532;p.y=276;p.clearTarget?.();this.broomEquipped=false;this.ui.showToast('계단을 올라 2층 생활공간으로 왔다. 1층 영업과 시간은 계속 흐른다.');this.save();
+    if(this.stairCooldown>0)return;this.stairCooldown=.35;this.playerFloors[this.controlled]='loft';this.floor='loft';const p=this.controlledPlayer();const safe=this.loftWorld.nearestWalkable(470,304,null,7);p.x=safe.x;p.y=safe.y;p.clearTarget?.();this.broomEquipped=false;this.ui.showToast('계단을 올라 2층 생활공간 오른쪽 출구로 나왔다. 1층 영업과 시간은 계속 흐른다.');this.save();
   }
   goDownstairs(){
-    this.playerFloors[this.controlled]='shop';this.floor='shop';const p=this.controlledPlayer();p.x=96;p.y=250;p.clearTarget?.();this.ui.showToast('1층 대장간으로 내려왔다.');this.save();
+    if(this.stairCooldown>0)return;this.stairCooldown=.35;this.playerFloors[this.controlled]='shop';this.floor='shop';const p=this.controlledPlayer();const safe=this.world.nearestWalkable(144,274,null,7);p.x=safe.x;p.y=safe.y;p.clearTarget?.();this.ui.showToast('1층 대장간으로 내려와 계단 앞 안전한 통로에 섰다.');this.save();
   }
   toggleBroom(){
     this.broomEquipped=!this.broomEquipped;this.ui.showToast(this.broomEquipped?'빗자루를 들었다. 먼지나 진상 가까이에서 E를 누르자.':'빗자루를 제자리에 세워뒀다.');this.save();
@@ -356,9 +364,9 @@ export class GameScene {
     for(const id of ['older','younger']){
       const task=this.brotherWork.task(id);if(task?.kind==='role')this.brotherWork.cancel(id);this.maintenance.assign(id,'idle');this.players[id].clearTarget?.();
       if(task?.kind==='craft'){this.playerFloors[id]='shop';}
-      else{this.playerFloors[id]='loft';if(id==='older'){this.players[id].x=144;this.players[id].y=250;}else{this.players[id].x=286;this.players[id].y=250;}}
+      else{this.playerFloors[id]='loft';if(id==='older'){this.players[id].x=150;this.players[id].y=252;}else{this.players[id].x=430;this.players[id].y=252;}}
     }
-    this.floor=this.playerFloors[this.controlled];this.merchantSeenVisits=new Set();this.merchantActiveVisit=null;this.merchantVisible=false;this.child.visible=false;this.childSpawned=false;this.childLeaveAt=0;this.childWillVisit=((this.day*47+13)%100)<45;this.morningShown=false;this.broomEquipped=false;this.orders.failOverdue(this.day,this.time.minute);
+    this.floor=this.playerFloors[this.controlled];this.merchantSeenVisits=new Set();this.merchantActiveVisit=null;this.merchantVisible=false;this.merchantVisitId=null;this.merchantArrived=false;this.child.visible=false;this.childSpawned=false;this.childLeaveAt=0;this.childWillVisit=((this.day*47+13)%100)<45;this.morningShown=false;this.broomEquipped=false;this.orders.failOverdue(this.day,this.time.minute);
     this.save(true);this.showMorningNews();
   }
   cleanShop(){if(!this.maintenance.dirtSpots.length&&this.maintenance.cleanliness>94){this.ui.showToast('바닥은 이미 꽤 깨끗하다.');return;}const near=this.nearestDirt(),spot=near?.p,n=this.maintenance.clean(near?.i??null);this.time.minute+=3;this.ui.showToast(`${spot?.type||'먼지'} ${n}곳을 쓸어냈다 · 게임 시간 3분`);this.save();}
@@ -450,13 +458,26 @@ export class GameScene {
     this.brotherWork.assignRole(id,role);if(role==='idle'){this.players[id].setTarget?.(id==='older'?305:350,300,this.world,null);}
     this.ui.showToast(`${BROTHERS[id].name}에게 ${this.roleName(role)} 업무를 맡겼다. 목적지까지 이동해 계속 수행한다.`);this.save();
   }
+  currentObjective(){
+    if(this.crafting.active){const item=ITEMS[this.crafting.active.itemId],stage=this.crafting.currentStage(),next=item?.stages?.[this.crafting.active.stageIndex+1];return{title:`${item?.name||'제작'} 제작 중`,current:`현재 단계 · ${stage?.label||'완성'}`,next:next?`다음 단계 · ${next.label}`:'다음 · 완성품 확인',target:stage?.station||'bench'};}
+    const waiting=this.customer.waiting?.()||[];if(waiting.length)return{title:'손님 응대 필요',current:`대기 손님 ${waiting.length}명`,next:'카운터에서 E로 응대',target:'counter'};
+    if(this.merchantVisible)return{title:'재료 상인 방문 중',current:this.merchantActiveVisit?.sale?`SALE · ${this.merchantActiveVisit.sale.label}`:'재료 보충 가능',next:`${this.time.format(this.merchantActiveVisit?.end||this.time.minute)} 전까지 이용`,target:'merchant'};
+    if(this.display.count()===0&&this.shopOpen)return{title:'진열대가 비어 있음',current:'판매할 완성품이 없다',next:'작업대에서 상품을 준비',target:'bench'};
+    if(!this.shopOpen&&this.time.minute>=720)return{title:'오늘 종료 가능',current:'대장간 CLOSED',next:this.floor==='loft'?'침대에서 하루 마치기':'2층 계단으로 올라가기',target:this.floor==='loft'?(this.controlled==='older'?'olderBed':'youngerBed'):'stairs'};
+    if(!this.shopOpen)return{title:'영업 준비',current:`진열 ${this.display.count()}/5 · 청결 ${Math.round(this.maintenance.cleanliness)}`,next:'준비가 끝나면 영업 표지판 OPEN',target:'sign'};
+    return{title:'대장간 운영 중',current:`진열 ${this.display.count()}/5 · 주문 ${this.orders.openOrders().length}`,next:'손님과 제작 상황을 살펴보자',target:null};
+  }
+  trackerNews(){const due=this.rent.nextDue(this.calendar),news=[];if(this.events.activeEvent)news.push(this.events.activeEvent.title||this.events.newsText());if(this.merchantActiveVisit?.sale)news.push(`상인 ${this.merchantActiveVisit.sale.label}`);else if(this.time.minute<480)news.push('오전 재료 상인 방문 예정');if(this.maintenance.cleanliness<60)news.push(`청결 낮음 ${Math.round(this.maintenance.cleanliness)}`);news.push(`다음 임대료 ${due.days}일 후`);return news.slice(0,3);}
+  showTracker(show=true){if(typeof document==='undefined')return;const el=document.getElementById('tracker');if(el){const was=el.classList.contains('hidden');el.classList.toggle('hidden',!show);if(was===show)window.__fitGameScale?.();}}
+  updateTrackerPanel(){if(typeof document==='undefined')return;const el=document.getElementById('tracker');if(!el)return;const wasHidden=el.classList.contains('hidden'),o=this.currentObjective(),news=this.trackerNews(),html=`<div class="tracker-head">현재 작업</div><div class="tracker-title">${o.title}</div><div class="tracker-line">${o.current}</div><div class="tracker-next">${o.next}</div><div class="tracker-divider"></div><div class="tracker-head small">오늘 소식</div>${news.map(x=>`<div class="tracker-news">• ${x}</div>`).join('')}`;if(html!==this.trackerCache){el.innerHTML=html;this.trackerCache=html;}el.classList.remove('hidden');if(wasHidden)window.__fitGameScale?.();}
+  renderObjectiveGlow(ctx){const o=this.currentObjective();if(!o?.target)return;let r=null;if(o.target==='merchant'&&this.merchantVisible)r={x:this.merchant.x-18,y:this.merchant.y-42,w:36,h:64};else if(this.floor==='shop')r=STATIONS[o.target];else r=LOFT_STATIONS[o.target];if(!r)return;const pulse=.5+.5*Math.sin(this.t*5);ctx.save();ctx.strokeStyle=`rgba(244,199,94,${.55+.35*pulse})`;ctx.lineWidth=2;ctx.strokeRect(Math.round(r.x-3),Math.round(r.y-3),Math.round(r.w+6),Math.round(r.h+6));ctx.fillStyle=`rgba(244,199,94,${.035+.04*pulse})`;ctx.fillRect(Math.round(r.x-4),Math.round(r.y-4),Math.round(r.w+8),Math.round(r.h+8));ctx.restore();}
   timeLabel(){return `${this.time.format()} · ${this.time.dayPart()}`;}
   snapshot(tutorialSeen=true){
     return{saveVersion:4,version:4,day:this.day,calendar:this.calendar.toJSON(),rent:this.rent.toJSON(),gold:this.economy.gold,reputation:this.economy.reputation,renownTier:this.renownTier,dayStats:this.economy.dayStats,time:this.time.toJSON(),shopOpen:this.shopOpen,inventory:this.inventory.toJSON(),display:this.display.toJSON(),orders:this.orders.toJSON(),maintenance:this.maintenance.toJSON(),brotherWork:this.brotherWork.toJSON(),activeEvent:this.events.activeEvent,nextEvent:this.events.nextEvent,crafting:this.crafting.toJSON(),customer:this.customer.toJSON(),weaponHistory:this.weaponHistory,customerHistory:this.customerHistory,customerProfiles:this.customerProfiles,debts:this.debts,recentRudeTypes:this.recentRudeTypes,knightPurchase:this.knightPurchase,flags:this.flags,controlled:this.controlled,floor:this.floor,playerFloors:{...this.playerFloors},players:{older:{x:this.players.older.x,y:this.players.older.y},younger:{x:this.players.younger.x,y:this.players.younger.y}},child:{visible:this.child.visible,x:this.child.x,y:this.child.y,spawned:this.childSpawned,leaveAt:this.childLeaveAt,willVisit:this.childWillVisit},kidFlags:this.kidFlags,merchantSeenVisits:[...this.merchantSeenVisits],broomEquipped:this.broomEquipped,closingNotified:this.closingNotified,morningShown:this.morningShown,tutorialSeen,playTimeSeconds:this.playTimeSeconds};
   }
   saveManual(slot){const ok=SaveSystem.saveSlot(slot,this.snapshot(true));if(!ok)this.ui.showToast('저장에 실패했다. 브라우저 저장공간을 확인해 주세요.');return ok;}
   loadFromSlot(slot){const data=SaveSystem.load(slot);if(!data){this.ui.showToast('저장 데이터를 불러올 수 없다.');return;}this.game.sound.setDucked(false);this.game.sound.startBGM();this.game.scenes.set(GameScene,{save:data,loadedSlot:slot});}
-  returnToTitle(){this.save(true);this.game.sound.setDucked(false);this.game.scenes.set(TitleScene);}
+  returnToTitle(){this.save(true);this.showTracker(false);this.game.sound.setDucked(false);this.game.scenes.set(TitleScene);}
   save(tutorialSeen=true){SaveSystem.saveAuto(this.snapshot(tutorialSeen));}
   render(ctx){
     if(this.floor==='shop'){
@@ -475,7 +496,7 @@ export class GameScene {
     }else{
       renderLoft(ctx,this.t,this.time.minute);for(const id of ['older','younger'])if(this.playerFloors[id]==='loft')drawCharacter(ctx,id,this.players[id].x,this.players[id].y,this.players[id].walkT,this.controlled===id);
     }
-    renderLighting(ctx,this.time.minute,this.floor,this.t);this.renderPrompts(ctx);this.ui.render(ctx,this);
+    this.renderObjectiveGlow(ctx);renderLighting(ctx,this.time.minute,this.floor,this.t);this.renderPrompts(ctx);this.ui.render(ctx,this);
   }
   renderWorkerStatus(ctx,id){
     if(this.controlled===id)return;const st=this.brotherWork.status(id);if(st.state==='IDLE')return;const p=this.players[id];ctx.fillStyle='#1b120de5';ctx.fillRect(p.x-30,p.y-52,60,12);ctx.fillStyle='#f1d28b';ctx.font='8px "Malgun Gothic", system-ui, sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(`${st.icon} ${st.label}`,p.x,p.y-46);ctx.textAlign='left';
@@ -485,10 +506,19 @@ export class GameScene {
   }
   renderHitStars(ctx,v){ctx.fillStyle='#f6d257';ctx.font='bold 12px "Malgun Gothic", system-ui, sans-serif';ctx.textAlign='center';ctx.fillText('✦  ✦',v.x,v.y-54);ctx.textAlign='left';}
   renderVisitorStatus(ctx,v){if(v.status==='leaving'&&!v.bubble)return;let text=v.bubble;if(!text){if(v.status==='waiting')text=v.mode==='commission'?'주문 상담':v.isRegular?'★ 단골':'!';else if(v.status==='ordered')text=`${v.isRegular?'★ ':''}${ITEMS[v.acceptedItem]?.name||'주문'} 기다림`;else if(v.status==='browsing')text=v.isRegular?'★ 단골 · 구경':'구경 중';else if(v.special)text='✦ 특별 손님';}if(!text)return;ctx.font='8px "Malgun Gothic", system-ui, sans-serif';const w=Math.min(102,ctx.measureText(text).width+10);ctx.fillStyle=v.special?'#f3dfad':'#f4e3c9';ctx.fillRect(Math.round(v.x-w/2),Math.round(v.y-48),Math.round(w),14);ctx.fillStyle='#3a291e';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,Math.round(v.x),Math.round(v.y-41));ctx.textAlign='left';}
+  renderCompactObjective(ctx){
+    if(typeof window==='undefined'||window.innerWidth>=1490)return;
+    const o=this.currentObjective();if(!o)return;
+    ctx.fillStyle='#1b120de8';ctx.fillRect(374,56,254,34);
+    ctx.fillStyle='#c99550';ctx.fillRect(374,56,3,34);
+    ctx.fillStyle='#f0cf8a';ctx.font='bold 8px "Malgun Gothic", system-ui, sans-serif';ctx.fillText(`현재 · ${o.title}`,382,67);
+    ctx.fillStyle='#d8c19c';ctx.font='7px "Malgun Gothic", system-ui, sans-serif';
+    const line=`${o.current} / ${o.next}`;ctx.fillText(line.length>42?line.slice(0,41)+'…':line,382,81);
+  }
   renderPrompts(ctx){
-    if(this.ui.modal||this.ui.craft||this.ui.shop||this.ui.isPauseOpen())return;const p=this.controlledPlayer();let prompt='';
+    if(this.ui.modal||this.ui.craft||this.ui.shop||this.ui.isPauseOpen())return;this.renderCompactObjective(ctx);const p=this.controlledPlayer();let prompt='';
     if(this.floor==='loft'){
-      const near=Object.entries(LOFT_STATIONS).map(([id,s])=>({id,s,d:this.dist(s.x+s.w/2,s.y+s.h/2)})).sort((a,b)=>a.d-b.d)[0];if(near?.d<62)prompt=`E ${near.s.label}`;
+      const near=Object.entries(LOFT_STATIONS).map(([id,s])=>{const ip=LOFT_INTERACTION_POINTS[id]||{x:s.x+s.w/2,y:s.y+s.h/2};return{id,s,d:this.dist(ip.x,ip.y)};}).sort((a,b)=>a.d-b.d)[0];if(near?.d<62)prompt=`E ${near.s.label}`;
     }else{
       if(this.broomEquipped){const rude=this.nearestRude(),dirt=this.nearestDirt();if(rude&&rude.d<68)prompt='E 빗자루로 진상 쫓아내기';else if(dirt&&dirt.d<34)prompt='E 빗자루 청소';}
       if(!prompt){const waiting=this.customer.nearestWaiting(p.x,p.y);if(waiting&&Math.hypot(p.x-waiting.x,p.y-waiting.y)<58)prompt=waiting.status==='ordered'?'E 주문품 판매':'E 손님 응대';else if(this.child.visible&&this.dist(this.child.x,this.child.y)<46)prompt='E 꼬마와 대화';else if(this.merchantVisible&&this.dist(this.merchant.x,this.merchant.y)<50)prompt='E 재료 구매';else{const other=this.nearestOtherBrother();if(other.d<38)prompt=`E ${BROTHERS[other.id].name}에게 업무 맡기기`;else{const near=Object.entries(STATIONS).map(([id,st])=>{const ip=INTERACTION_POINTS[id]||{x:st.x+st.w/2,y:st.y+st.h/2};return{id,s:st,d:this.dist(ip.x,ip.y)};}).sort((a,b)=>a.d-b.d)[0];if(near?.d<60)prompt=`E ${near.s.label}`;}}}

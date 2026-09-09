@@ -1,0 +1,13 @@
+{
+  "name": "blacksmith-brothers-v0.2",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "중세 판타지 형제 대장장이 생활형 경영게임 V0.2",
+  "scripts": {
+    "dev": "node scripts/dev-server.mjs",
+    "build": "node scripts/build.mjs",
+    "preview": "node scripts/preview-server.mjs",
+    "test": "node tests/systems.test.mjs && node tests/scene-smoke.test.mjs"
+  }
+}

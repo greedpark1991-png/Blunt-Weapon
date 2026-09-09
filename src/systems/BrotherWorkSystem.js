@@ -1,4 +1,4 @@
-import { ITEMS, BROTHERS, STATIONS } from '../data/GameData.js';
+import { ITEMS, BROTHERS, STATIONS, chooseTrait } from '../data/GameData.js';
 
 const ROLE_STATIONS={
   counter:'counter',
@@ -20,7 +20,8 @@ function makeItem(task){
   if(worker.id==='younger'&&(recipe.family==='bow'||recipe.family==='arrow'))avg+=worker.bowScore||0;
   if(worker.id==='older'&&recipe.family==='shield')avg+=5;
   let quality='crude';if(avg>=92)quality='master';else if(avg>=76)quality='excellent';else if(avg>=55)quality='normal';
-  return {uid:`auto-${Date.now()}-${Math.random().toString(16).slice(2)}`,itemId:recipe.id,itemName:recipe.name,basePrice:recipe.price,quality,maker:worker.id,makerName:worker.name,score:Math.round(avg),bundle:recipe.bundle||1};
+  const perfectStages=task.precisionStages||0,trait=chooseTrait(recipe.family,perfectStages,recipe.stages.length,Math.random());
+  return {uid:`auto-${Date.now()}-${Math.random().toString(16).slice(2)}`,itemId:recipe.id,itemName:recipe.name,basePrice:recipe.price,quality,maker:worker.id,makerName:worker.name,score:Math.round(avg),bundle:recipe.bundle||1,perfectStages,stageCount:recipe.stages.length,trait};
 }
 
 export class BrotherWorkSystem{
@@ -41,7 +42,7 @@ export class BrotherWorkSystem{
     if(this.busy(workerId))return{ok:false,reason:`${BROTHERS[workerId].name}은(는) 이미 다른 일을 하는 중이다.`};
     const recipe=ITEMS[itemId];if(!recipe)return{ok:false,reason:'알 수 없는 제작법이다.'};
     if(!inventory.consume(recipe))return{ok:false,reason:'재료가 부족하다.'};
-    this.tasks[workerId]={workerId,kind:'craft',itemId,stageIndex:0,scores:[],state:'GO_TO_WORKSTATION',stationId:recipe.stages[0].station,stuckFor:0,lastDistance:null,workRemaining:0,completedItem:null};
+    this.tasks[workerId]={workerId,kind:'craft',itemId,stageIndex:0,scores:[],precisionStages:0,state:'GO_TO_WORKSTATION',stationId:recipe.stages[0].station,stuckFor:0,lastDistance:null,workRemaining:0,completedItem:null};
     return{ok:true,stage:recipe.stages[0]};
   }
   status(id){
@@ -111,7 +112,7 @@ export class BrotherWorkSystem{
         let score=66+Math.random()*20;
         if(task.workerId==='older'&&['hammer','rivet','heat'].includes(stage.kind))score+=6;
         if(task.workerId==='younger'&&['grind','assemble','string','test','wood'].includes(stage.kind))score+=6;
-        task.scores.push(Math.min(98,Math.round(score)));task.stageIndex++;
+        const finalScore=Math.min(98,Math.round(score));task.scores.push(finalScore);if(finalScore>=94)task.precisionStages=(task.precisionStages||0)+1;task.stageIndex++;
         if(task.stageIndex>=recipe.stages.length){task.completedItem=makeItem(task);task.state='DELIVERING';task.stuckFor=0;p.target=null;events.push({type:'craftFinished',workerId:task.workerId,item:task.completedItem});}
         else{task.state='GO_TO_WORKSTATION';task.stuckFor=0;p.target=null;events.push({type:'stageDone',workerId:task.workerId,itemId:task.itemId,stageIndex:task.stageIndex});}
       }

@@ -1,3 +1,4 @@
-Blacksmith Brothers V0.2.1
-Built: 2026-09-09T12:33:11.698Z
+Blacksmith Brothers V0.2.4
+Built: 2026-09-09T15:50:32.677Z
 Static hosting ready.
+Includes supplied The Artisan's Hearth BGM.

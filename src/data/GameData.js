@@ -93,7 +93,7 @@ export const STATIONS = {
   water:   { x:258, y:196, w:48, h:34, label:'담금질 통' },
   storage: { x:74,  y:244, w:86, h:54, label:'창고' },
   counter: { x:432, y:263, w:122,h:38, label:'카운터' },
-  stairs:  { x:238, y:282, w:86, h:46, label:'2층 계단' },
+  stairs:  { x:12, y:220, w:56, h:96, label:'2층 계단' },
   broom:   { x:369, y:286, w:34, h:42, label:'빗자루' },
   sign:    { x:565, y:286, w:38, h:38, label:'영업 표지판' },
   door:    { x:558, y:326, w:58, h:28, label:'출입구' },
@@ -108,6 +108,62 @@ export const LOFT_STATIONS = {
   lamp:       { x:438, y:82,  w:34, h:54, label:'등불' },
   stairsDown: { x:520, y:258, w:84, h:64, label:'1층 계단' },
 };
+
+
+export const TRAITS = {
+  blade: [
+    {id:'sharp',name:'날카로운',multiplier:1.15,tier:1},
+    {id:'well_honed',name:'잘 벼린',multiplier:1.20,tier:2},
+    {id:'balanced',name:'균형 잡힌',multiplier:1.22,tier:2},
+    {id:'excellent_edge',name:'뛰어난',multiplier:1.35,tier:3},
+    {id:'shining',name:'빛나는',multiplier:1.30,tier:3},
+  ],
+  shield: [
+    {id:'solid',name:'단단한',multiplier:1.14,tier:1},
+    {id:'sturdy',name:'견고한',multiplier:1.20,tier:2},
+    {id:'tough',name:'튼튼한',multiplier:1.18,tier:2},
+    {id:'well_built',name:'잘 짜인',multiplier:1.24,tier:2},
+    {id:'shining',name:'빛나는',multiplier:1.30,tier:3},
+  ],
+  bow: [
+    {id:'flexible',name:'유연한',multiplier:1.15,tier:1},
+    {id:'balanced',name:'균형 잡힌',multiplier:1.22,tier:2},
+    {id:'precise',name:'정교한',multiplier:1.28,tier:3},
+    {id:'excellent',name:'뛰어난',multiplier:1.34,tier:3},
+  ],
+  arrow: [
+    {id:'straight',name:'곧은',multiplier:1.12,tier:1},
+    {id:'sharp',name:'날카로운',multiplier:1.16,tier:2},
+    {id:'precise',name:'정밀한',multiplier:1.22,tier:3},
+  ],
+};
+
+export function chooseTrait(family, perfectStages=0, stageCount=1, seed=Math.random()){
+  const pool=TRAITS[family]||[];
+  if(!pool.length||perfectStages<=0)return null;
+  const allPerfect=perfectStages>=stageCount;
+  let chance=perfectStages===1?.28:perfectStages===2?.58:perfectStages>=3?.84:0;
+  if(allPerfect)chance=.98;
+  if(seed>chance)return null;
+  const maxTier=allPerfect?3:perfectStages>=3?3:perfectStages>=2?2:1;
+  const choices=pool.filter(t=>t.tier<=maxTier);
+  const pick=choices[Math.floor((seed*997)%choices.length)]||choices[0];
+  return pick?{...pick}:null;
+}
+
+export const RUDE_TYPES = {
+  durability:{id:'durability',name:'내구도 빌런',line:'전에 산 무기를 거칠게 쓰고는 칼날이 나갔다며 불량품이라고 우긴다.'},
+  credit:{id:'credit',name:'외상 영웅',line:'현상수배범만 잡으면 큰돈이 생긴다며 또 외상을 요구한다.'},
+  magic:{id:'magic',name:'마법 폭발 책임전가형',line:'혼자 마법을 걸다 무기를 망가뜨리고 대장간 탓을 한다.'},
+  elf:{id:'elf',name:'자연주의 엘프',line:'철에서 대지의 비명이 들린다며 제작 방식에 훈수를 둔다.'},
+  dwarf:{id:'dwarf',name:'라떼는 드워프',line:'우리 산맥에서는 그렇게 안 했다며 망치질부터 지적한다.'},
+  compare:{id:'compare',name:'옆 마을 비교형',line:'옆 마을은 더 싸다며 가격을 계속 깎으려 한다.'},
+  calculator:{id:'calculator',name:'원가 계산기',line:'재료값만 계산하며 기술료와 공임은 없는 셈 친다.'},
+  closing:{id:'closing',name:'마감 1분 전 손님',line:'아직 안 닫았죠? 장검 세 자루만 금방 만들어 달라고 한다.'},
+  refund:{id:'refund',name:'환불 빌런',line:'며칠 쓴 물건을 마음이 바뀌었다며 전액 환불해 달라고 한다.'},
+  changes:{id:'changes',name:'과도한 주문 변경',line:'단검 주문을 시작으로 길이와 장식과 방패까지 계속 조건을 바꾼다.'},
+};
+export const RUDE_TYPE_ORDER = Object.keys(RUDE_TYPES);
 
 export const RANDOM_EVENTS = [
   { id:'mine', title:'광산 사고', text:'광산 갱도가 일부 무너졌다. 철 매입가가 30% 오른다.', material:{iron:1.30}, demand:{} },

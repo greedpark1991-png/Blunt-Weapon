@@ -58,4 +58,4 @@ work.assignRole('younger','counter');
 for(let i=0;i<240;i++){work.update(1/30,workers);workers.younger.update(1/30,input,false);}
 assert.equal(work.task('younger').state,'WORKING');
 
-console.log('✓ V0.2.1 systems tests passed');
+console.log('✓ V0.2.4 systems tests passed');

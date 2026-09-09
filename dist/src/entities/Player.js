@@ -5,7 +5,7 @@ export class Player{
       const dx=this.target.x-this.x,dy=this.target.y-this.y,d=Math.hypot(dx,dy);
       if(d<2){this.x=this.target.x;this.y=this.target.y;this.target=null;}
       else{
-        const maxSpeed=this.id==='older'?90:104;
+        const maxSpeed=this.id==='older'?118:132;
         const s=Math.min(maxSpeed,d/Math.max(.001,dt));
         this.x+=dx/d*s*dt;this.y+=dy/d*s*dt;this.walkT+=dt*9;
         if(Math.abs(dx)>Math.abs(dy))this.facing=dx<0?'left':'right';else this.facing=dy<0?'up':'down';
@@ -17,8 +17,8 @@ export class Player{
     if(dx||dy){
       const l=Math.hypot(dx,dy);dx/=l;dy/=l;
       // V0.2.1: roughly twice the original prototype pace so workstation travel feels snappy.
-      const speed=this.id==='older'?76:84;
-      this.x+=dx*speed*dt;this.y+=dy*speed*dt;this.walkT+=dt*10;
+      const speed=this.id==='older'?110:122;
+      this.x+=dx*speed*dt;this.y+=dy*speed*dt;this.walkT+=dt*15;
       if(Math.abs(dx)>Math.abs(dy))this.facing=dx<0?'left':'right';else this.facing=dy<0?'up':'down';
     }
     this.clamp();

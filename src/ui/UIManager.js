@@ -43,8 +43,8 @@ export class UIManager {
     ctx.font='bold 15px monospace';ctx.fillStyle='#fff0c6';ctx.fillText(s.time.format(),78,14);
     ctx.font='bold 10px monospace';ctx.fillStyle=s.shopOpen?'#a8d18f':'#d7a17b';ctx.fillText(s.shopOpen?'OPEN':'CLOSED',145,14);
     ctx.fillStyle='#f2d9a6';ctx.fillText(`G ${s.economy.gold}`,215,14);ctx.fillText(`평판 ${s.economy.reputation}`,282,14);ctx.fillText(`진열 ${s.display.count()}/5`,365,14);ctx.fillText(`청결 ${Math.round(s.maintenance.cleanliness)}`,440,14);
-    ctx.fillStyle='#e8bd72';ctx.fillText(`조작 ${s.controlled==='older'?'형':'동생'} [Q]`,525,14);
-    ctx.fillStyle='#2f2016';ctx.fillRect(6,35,340,18);ctx.fillStyle='#d9bd8b';ctx.font='9px monospace';ctx.fillText(`소식 · ${s.events.activeEvent?.title||'평온한 하루'}`,12,44);
+    ctx.fillStyle='#e8bd72';ctx.fillText(`조작 ${s.controlled==='older'?'형':'동생'} · ${s.floor==='loft'?'2층':'1층'} [Q]`,505,14);
+    ctx.fillStyle='#2f2016';ctx.fillRect(6,35,340,18);ctx.fillStyle='#d9bd8b';ctx.font='9px monospace';ctx.fillText(`소식 · ${s.events.activeEvent?.title||'평온한 하루'}`,12,44);if(s.broomEquipped){ctx.fillStyle='#f0c56e';ctx.fillText('빗자루 장착',354,44);}
     if(s.orders.openOrders().length){ctx.fillStyle='#3a2417';ctx.fillRect(486,35,146,18);ctx.fillStyle='#e8c285';ctx.fillText(`미납 주문 ${s.orders.openOrders().length}건`,494,44);}
   }
   panel(ctx,x,y,w,h){ctx.fillStyle='#281a12';ctx.fillRect(x-3,y-3,w+6,h+6);ctx.fillStyle='#8c653d';ctx.fillRect(x,y,w,h);ctx.fillStyle='#ead3a4';ctx.fillRect(x+3,y+3,w-6,h-6);ctx.fillStyle='#563922';ctx.fillRect(x+6,y+6,w-12,h-12);}

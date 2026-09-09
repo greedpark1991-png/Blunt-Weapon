@@ -8,6 +8,8 @@ import { TimeSystem } from '../src/systems/TimeSystem.js';
 import { DisplaySystem } from '../src/systems/DisplaySystem.js';
 import { OrderSystem } from '../src/systems/OrderSystem.js';
 import { MaintenanceSystem } from '../src/systems/MaintenanceSystem.js';
+import { BrotherWorkSystem } from '../src/systems/BrotherWorkSystem.js';
+import { Player } from '../src/entities/Player.js';
 import { ITEMS } from '../src/data/GameData.js';
 
 const inv=new Inventory();
@@ -34,6 +36,26 @@ const maintenance=new MaintenanceSystem();maintenance.prepForge();assert.equal(m
 
 const events=new EventSystem({activeEvent:undefined});assert.equal(events.activeEvent.id,'goblins');
 const eco=new Economy();const item={...finished.item,itemId:'sword',basePrice:ITEMS.sword.price,quality:'normal'};assert.ok(eco.priceFor(item,events.activeEvent)>ITEMS.sword.price);
+const fullIron=eco.materialPrice('iron',null);const saleIron=eco.materialPrice('iron',null,.8);assert.ok(saleIron<fullIron);
 
 const cs=new CustomerSystem(1,{},null);const ev=cs.update(.1,{minute:780,open:true,event:events.activeEvent,patienceMultiplier:1});assert.ok(ev.some(e=>e.type==='spawn'&&e.visitor.knight));assert.ok(cs.activeCount()>=1);
-console.log('✓ V0.2 systems tests passed');
+
+// V0.2.1 brother task state machine: assigned craft must walk, work, deliver, and finish.
+const autoInv=new Inventory({materials:{iron:8,wood:7,leather:3},items:[]});
+const workers={older:new Player('older',300,300),younger:new Player('younger',340,300)};
+const input={down(){return false;}};const work=new BrotherWorkSystem();
+assert.equal(work.assignCraft('older','shield',autoInv).ok,true);
+assert.equal(work.task('older').state,'GO_TO_WORKSTATION');
+let delivered=null;
+for(let i=0;i<1600&&!delivered;i++){
+  const out=work.update(1/30,workers);workers.older.update(1/30,input,false);
+  delivered=out.find(x=>x.type==='craftDelivered')||null;
+}
+assert.ok(delivered?.item,'auto worker should always complete and deliver');
+assert.equal(delivered.item.itemId,'shield');
+assert.equal(work.busy('older'),false);
+work.assignRole('younger','counter');
+for(let i=0;i<240;i++){work.update(1/30,workers);workers.younger.update(1/30,input,false);}
+assert.equal(work.task('younger').state,'WORKING');
+
+console.log('✓ V0.2.1 systems tests passed');

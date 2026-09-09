@@ -34,7 +34,7 @@ export class CustomerSystem {
       if(v.status==='walking'){const dx=v.targetX-v.x,dy=v.targetY-v.y,d=Math.hypot(dx,dy);if(d<2){v.x=v.targetX;v.y=v.targetY;v.status=v.mode==='general'?'browsing':'waiting';if(v.status==='browsing')v.browseTimer=4+Math.random()*4;out.push({type:v.status==='browsing'?'browseStart':'waiting',visitor:v});}else{const sp=54;v.x+=dx/d*sp*dt;v.y+=dy/d*sp*dt;}}
       else if(v.status==='browsing'){v.browseTimer-=dt;if(v.browseTimer<=0){v.browseTimer=999;out.push({type:'browseComplete',visitor:v});}}
       else if(v.status==='waiting'||v.status==='ordered'){v.patience-=dt*patienceMultiplier;if(v.patience<=0){out.push({type:'impatient',visitor:v});this.leave(v,'기다리다 지쳐 나갔다.');}}
-      else if(v.status==='leaving'){const dx=598-v.x,dy=326-v.y,d=Math.hypot(dx,dy);if(d<4){v.status='gone';out.push({type:'gone',visitor:v});}else{const sp=62;v.x+=dx/d*sp*dt;v.y+=dy/d*sp*dt;}}
+      else if(v.status==='leaving'){const dx=598-v.x,dy=326-v.y,d=Math.hypot(dx,dy);if(d<4){v.status='gone';out.push({type:'gone',visitor:v});}else{const sp=v.fleeSpeed||62;v.x+=dx/d*sp*dt;v.y+=dy/d*sp*dt;}}
     }
     this.visitors=this.visitors.filter(v=>v.status!=='gone');return out;
   }

@@ -93,10 +93,20 @@ export const STATIONS = {
   water:   { x:258, y:196, w:48, h:34, label:'담금질 통' },
   storage: { x:74,  y:244, w:86, h:54, label:'창고' },
   counter: { x:432, y:263, w:122,h:38, label:'카운터' },
-  bed:     { x:238, y:286, w:88, h:42, label:'침대' },
+  stairs:  { x:238, y:282, w:86, h:46, label:'2층 계단' },
   broom:   { x:369, y:286, w:34, h:42, label:'빗자루' },
   sign:    { x:565, y:286, w:38, h:38, label:'영업 표지판' },
   door:    { x:558, y:326, w:58, h:28, label:'출입구' },
+};
+
+export const LOFT_STATIONS = {
+  olderBed:   { x:82,  y:176, w:112, h:52, label:'형의 침대' },
+  youngerBed: { x:224, y:176, w:112, h:52, label:'동생의 침대' },
+  table:      { x:366, y:170, w:74, h:50, label:'작은 테이블' },
+  wardrobe:   { x:66,  y:76,  w:66, h:72, label:'수납장' },
+  window:     { x:266, y:58,  w:90, h:56, label:'창문' },
+  lamp:       { x:438, y:82,  w:34, h:54, label:'등불' },
+  stairsDown: { x:520, y:258, w:84, h:64, label:'1층 계단' },
 };
 
 export const RANDOM_EVENTS = [
@@ -128,4 +138,4 @@ export function demandMultiplier(itemId, activeEvent){
   return activeEvent?.demand?.[itemId] || 1;
 }
 
-export function stationName(id){ return STATIONS[id]?.label || id; }
+export function stationName(id){ return STATIONS[id]?.label || LOFT_STATIONS[id]?.label || id; }

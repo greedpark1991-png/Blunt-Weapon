@@ -84,19 +84,49 @@ export const BROTHERS = {
 export const MATERIAL_PRICES = { iron:18, wood:12, leather:10 };
 export const MATERIAL_NAMES = { iron:'철', wood:'목재', leather:'가죽' };
 
+export const FUEL_TYPES={wood:{id:'wood',name:'장작'},coal:{id:'coal',name:'석탄'}};
+
 export const STATIONS = {
-  forge:   { x:66,  y:82,  w:96, h:62, label:'화로' },
-  display: { x:500, y:80,  w:82, h:62, label:'판매 진열대' },
-  anvil:   { x:178, y:184, w:58, h:38, label:'모루' },
-  bench:   { x:302, y:118, w:98, h:46, label:'작업대' },
-  grind:   { x:434, y:184, w:62, h:48, label:'숫돌' },
-  water:   { x:258, y:196, w:48, h:34, label:'담금질 통' },
-  storage: { x:74,  y:244, w:86, h:54, label:'창고' },
-  counter: { x:432, y:263, w:122,h:38, label:'카운터' },
-  stairs:  { x:12, y:220, w:56, h:96, label:'2층 계단' },
-  broom:   { x:369, y:286, w:34, h:42, label:'빗자루' },
-  sign:    { x:565, y:286, w:38, h:38, label:'영업 표지판' },
+  // V0.2.5: left/top work zone is dense; right/bottom customer zone stays open.
+  stairs:  { x:18,  y:148, w:58, h:104, label:'2층 계단' },
+  fuel:    { x:82,  y:148, w:44, h:44, label:'장작·석탄' },
+  forge:   { x:132, y:140, w:84, h:60, label:'화로' },
+  anvil:   { x:230, y:158, w:58, h:38, label:'모루' },
+  water:   { x:302, y:164, w:50, h:34, label:'담금질 통' },
+  bench:   { x:176, y:218, w:112,h:48, label:'큰 작업대' },
+  storage: { x:78,  y:254, w:84, h:52, label:'재료 창고' },
+  grind:   { x:326, y:226, w:64, h:48, label:'숫돌' },
+  display: { x:510, y:82,  w:82, h:62, label:'판매 진열대' },
+  counter: { x:426, y:254, w:132,h:34, label:'판매 카운터' },
+  broom:   { x:382, y:292, w:34, h:40, label:'빗자루' },
+  sign:    { x:568, y:286, w:38, h:38, label:'영업 표지판' },
   door:    { x:558, y:326, w:58, h:28, label:'출입구' },
+};
+
+export const SHOP_BOUNDS={left:34,right:606,top:142,bottom:326};
+export const SHOP_ZONES={
+  WORK_ZONE:{x:34,y:142,w:374,h:184},
+  CUSTOMER_ZONE:{x:410,y:148,w:196,h:178},
+  CHILD_SAFE_ZONE:{x:352,y:188,w:190,h:116},
+};
+// Footprints are intentionally smaller than the visual sprites. They describe floor occupancy.
+export const SHOP_COLLIDERS=[
+  {id:'stairs',x:18,y:190,w:58,h:62},
+  {id:'fuel',x:82,y:169,w:44,h:23},
+  {id:'forge',x:132,y:171,w:84,h:29},
+  {id:'anvil',x:230,y:178,w:58,h:18},
+  {id:'water',x:302,y:181,w:50,h:17},
+  {id:'bench',x:176,y:238,w:112,h:28},
+  {id:'storage',x:78,y:276,w:84,h:30},
+  {id:'grind',x:326,y:250,w:64,h:24},
+  {id:'counterTop',x:426,y:263,w:132,h:25},
+  {id:'counterLeg',x:426,y:284,w:30,h:42},
+  {id:'display',x:510,y:126,w:82,h:18},
+];
+export const INTERACTION_POINTS={
+  stairs:{x:85,y:230},fuel:{x:108,y:204},forge:{x:174,y:212},anvil:{x:259,y:211},water:{x:327,y:212},
+  bench:{x:232,y:282},storage:{x:122,y:319},grind:{x:358,y:288},display:{x:548,y:158},counter:{x:486,y:244},
+  broom:{x:398,y:286},sign:{x:576,y:304},door:{x:586,y:318},
 };
 
 export const LOFT_STATIONS = {
@@ -181,6 +211,24 @@ export const CUSTOMER_ARCHETYPES = {
   guard: { name:'마을 경비', preferences:['sword','shield'], budget:1.28, patience:115, line:'순찰에 쓸 장비가 필요하오.' },
   knight: { name:'기사', preferences:['longsword','shield','sword'], budget:1.55, patience:130, line:'기사단에서 쓸 장비를 살펴보러 왔소.' },
 };
+
+export const CUSTOMER_NAMES={
+  villager:['밀러 한스','빵집 리나','목수 오토','재봉사 마리'],
+  adventurer:['모험가 베른','모험가 세라','모험가 토빈','모험가 네아'],
+  mercenary:['용병 카르','용병 브란','용병 리제'],
+  hunter:['사냥꾼 에드','사냥꾼 로웬','사냥꾼 미라'],
+  guard:['경비병 토마','경비병 그레인','경비병 유리'],
+  knight:['기사 로데릭','기사 에델','기사 하르트'],
+};
+
+export const RENOWN_TIERS=[
+  {min:0,max:9,id:'unknown',name:'무명의 대장간'},
+  {min:10,max:24,id:'local',name:'동네에서 소문난 대장간'},
+  {min:25,max:49,id:'famous',name:'마을의 유명 대장간'},
+  {min:50,max:79,id:'regional',name:'인근 지역에 알려진 대장간'},
+  {min:80,max:119,id:'prestige',name:'지역 명문 대장간'},
+  {min:120,max:999999,id:'legend',name:'이름난 형제 대장장이'},
+];
 
 export const CHILD_LINES = [
   '오늘은 뭐 만들어?',

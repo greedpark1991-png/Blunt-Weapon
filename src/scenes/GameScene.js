@@ -13,31 +13,34 @@ import { MaintenanceSystem } from '../systems/MaintenanceSystem.js';
 import { BrotherWorkSystem } from '../systems/BrotherWorkSystem.js';
 import { CalendarSystem } from '../systems/CalendarSystem.js';
 import { RentSystem } from '../systems/RentSystem.js';
+import { WorldSystem } from '../systems/WorldSystem.js';
+import { RenownSystem } from '../systems/RenownSystem.js';
 import { UIManager } from '../ui/UIManager.js';
-import { ITEMS, ITEM_ORDER, QUALITY, BROTHERS, CHILD_LINES, STATIONS, LOFT_STATIONS, MATERIAL_NAMES, RUDE_TYPES, demandMultiplier, stationName } from '../data/GameData.js';
-import { renderShop, renderLoft, renderLighting, drawDirt, drawCharacter } from '../utils/render.js';
+import { ITEMS, ITEM_ORDER, QUALITY, BROTHERS, CHILD_LINES, STATIONS, LOFT_STATIONS, MATERIAL_NAMES, RUDE_TYPES, INTERACTION_POINTS, demandMultiplier, stationName } from '../data/GameData.js';
+import { renderShopBase, getShopDrawables, renderLoft, renderLighting, drawDirt, drawCharacter } from '../utils/render.js';
 import { TitleScene } from './TitleScene.js';
 
 export class GameScene {
   constructor(game,payload={}){
-    this.game=game;this.t=0;const s=payload.save||{};
+    this.game=game;this.t=0;const s=payload.save||{};this.world=new WorldSystem();
     this.day=s.day??1;this.calendar=new CalendarSystem(s.calendar,this.day);this.rent=new RentSystem(s.rent);this.time=new TimeSystem(s.time);this.shopOpen=s.shopOpen??false;
     this.inventory=new Inventory(s.inventory);this.display=new DisplaySystem(s.display);this.orders=new OrderSystem(s.orders);this.maintenance=new MaintenanceSystem(s.maintenance);
     this.economy=new Economy({gold:s.gold,reputation:s.reputation,dayStats:s.dayStats});this.events=new EventSystem({activeEvent:s.activeEvent,nextEvent:s.nextEvent});this.crafting=new CraftingSystem({active:s.crafting?.active});this.brotherWork=new BrotherWorkSystem(s.brotherWork);
-    this.weaponHistory=s.weaponHistory?[...s.weaponHistory]:[];this.customerHistory=s.customerHistory?[...s.customerHistory]:[];this.debts={...(s.debts||{})};this.recentRudeTypes=[...(s.recentRudeTypes||[])];this.knightPurchase=s.knightPurchase||null;this.flags={knightSeen:false,rudeSeen:false,rudeEver:false,...(s.flags||{})};this.controlled=s.controlled||'younger';this.playTimeSeconds=s.playTimeSeconds||0;this.loadedSlot=payload.loadedSlot||null;
+    this.weaponHistory=s.weaponHistory?[...s.weaponHistory]:[];this.customerHistory=s.customerHistory?[...s.customerHistory]:[];this.customerProfiles=JSON.parse(JSON.stringify(s.customerProfiles||{}));this.debts={...(s.debts||{})};this.recentRudeTypes=[...(s.recentRudeTypes||[])];this.renownTier=s.renownTier??RenownSystem.tierIndex(s.reputation??0);this.kidFlags={visits:0,gifts:0,rumors:0,apprenticeHint:false,...(s.kidFlags||{})};this.knightPurchase=s.knightPurchase||null;this.flags={knightSeen:false,rudeSeen:false,rudeEver:false,...(s.flags||{})};this.controlled=s.controlled||'younger';this.playTimeSeconds=s.playTimeSeconds||0;this.loadedSlot=payload.loadedSlot||null;
     const newGame=!!payload.newGame,defaultFloor=newGame?'loft':'shop';this.floor=s.floor||defaultFloor;this.playerFloors={older:s.playerFloors?.older||defaultFloor,younger:s.playerFloors?.younger||defaultFloor};
-    const olderDefault=this.playerFloors.older==='loft'?{x:144,y:250}:{x:248,y:258},youngerDefault=this.playerFloors.younger==='loft'?{x:286,y:250}:{x:330,y:258};
+    const olderDefault=this.playerFloors.older==='loft'?{x:144,y:250}:{x:308,y:300},youngerDefault=this.playerFloors.younger==='loft'?{x:286,y:250}:{x:350,y:300};
     this.players={older:new Player('older',s.players?.older?.x??olderDefault.x,s.players?.older?.y??olderDefault.y),younger:new Player('younger',s.players?.younger?.x??youngerDefault.x,s.players?.younger?.y??youngerDefault.y)};
-    this.customer=new CustomerSystem(this.day,this.stateForData(),s.customer);this.merchant=new NPC('merchant','재료 상인',152,310);this.merchantVisible=false;this.merchantActiveVisit=null;this.merchantSeenVisits=new Set(s.merchantSeenVisits||[]);
-    this.child=new NPC('child','후드 꼬마',602,318);this.child.visible=s.child?.visible??false;this.child.x=s.child?.x??602;this.child.y=s.child?.y??318;this.childSpawned=s.child?.spawned??false;this.childLeaveAt=s.child?.leaveAt??0;
+    for(const id of ['older','younger'])if(this.playerFloors[id]==='shop'){const safe=this.world.nearestWalkable(this.players[id].x,this.players[id].y,null,7);this.players[id].x=safe.x;this.players[id].y=safe.y;}
+    this.customer=new CustomerSystem(this.day,this.stateForData(),s.customer);this.merchant=new NPC('merchant','재료 상인',516,312);this.merchantVisible=false;this.merchantActiveVisit=null;this.merchantSeenVisits=new Set(s.merchantSeenVisits||[]);
+    this.child=new NPC('child','후드 꼬마',586,318);this.child.visible=s.child?.visible??false;this.child.x=s.child?.x??586;this.child.y=s.child?.y??318;this.childSpawned=s.child?.spawned??false;this.childLeaveAt=s.child?.leaveAt??0;this.childWillVisit=s.child?.willVisit??(((this.day*47+13)%100)<45);
     this.broomEquipped=s.broomEquipped??false;this.ui=new UIManager();this.cutscene=null;this.closingNotified=s.closingNotified??false;this.morningShown=s.morningShown??false;this.autoSaveT=0;this.pendingForcedSleep=false;this.showTutorial=newGame||!s.tutorialSeen;
   }
   init(){
     if(this.showTutorial){
-      this.ui.openModal('V0.2.4 · 기본 UX 완성 업데이트','06:00에는 2층 생활공간에서 하루가 시작된다. 달력과 분기 임대료, 정밀 PERFECT 제작, 다중 구매, 다양한 진상, ESC 일시정지·6개 수동 세이브·옵션·BGM이 추가되었다.',[{label:'아침 시작'}],()=>{this.showTutorial=false;this.save(true);this.showMorningNews();});
+      this.ui.openModal('V0.2.5 · 사람이 살아가는 대장간','공간 충돌과 작업 동선을 다시 만들었다. 작업 구역과 손님 구역이 나뉘고, 키보드 메뉴·조기 취침·명성·단골·다양한 오염과 꼬마 소문 시스템이 추가되었다.',[{label:'아침 시작'}],()=>{this.showTutorial=false;this.save(true);this.showMorningNews();});
     }else if(!this.morningShown)this.showMorningNews();
   }
-  stateForData(){return{knightPurchase:this.knightPurchase,activeEvent:this.events.activeEvent,customerHistory:this.customerHistory,debts:this.debts,recentRudeTypes:this.recentRudeTypes,rudeEver:this.flags.rudeEver};}
+  stateForData(){return{knightPurchase:this.knightPurchase,activeEvent:this.events.activeEvent,customerHistory:this.customerHistory,customerProfiles:this.customerProfiles,debts:this.debts,recentRudeTypes:this.recentRudeTypes,rudeEver:this.flags.rudeEver,reputation:this.economy?.reputation??0};}
   showMorningNews(){
     this.morningShown=true;const cond=this.maintenance.condition==='rested'?'일찍 자서 몸이 가볍다. 제작 품질에 작은 보너스가 있다.':this.maintenance.condition==='tired'?'늦게까지 버텨서 피곤하다. 오늘 제작 정밀도가 조금 떨어진다.':'컨디션은 평범하다.';
     const warning=this.rent.warning(this.calendar),settle=this.rent.settleIfDue(this.calendar,this.economy);
@@ -59,8 +62,8 @@ export class GameScene {
     const clockPaused=this.ui.isWorldPaused();
     if(!clockPaused){
       this.playTimeSeconds+=dt;
-      const before=this.time.minute;this.time.update(dt);this.maintenance.update(this.time.minute-before);this.updateShopTime();this.updateMerchant();this.updateChild(dt);this.updateCustomers(dt);this.updateCutscene(dt);
-      const workEvents=this.brotherWork.update(dt,this.players);this.handleBrotherWorkEvents(workEvents);
+      const before=this.time.minute;this.time.update(dt);this.maintenance.update(this.time.minute-before,(x,y)=>this.world.isWalkable(x,y,null,6));this.updateShopTime();this.updateMerchant();this.updateChild(dt);this.updateCustomers(dt);this.updateCutscene(dt);
+      const workEvents=this.brotherWork.update(dt,this.players,this.world);this.handleBrotherWorkEvents(workEvents);
       for(const v of this.customer.visitors){if(v.bubbleT>0){v.bubbleT-=dt;if(v.bubbleT<=0)v.bubble='';}if(v.hitStarT>0)v.hitStarT-=dt;}
       this.autoSaveT+=dt;if(this.autoSaveT>=20){this.autoSaveT=0;this.save();}
     }
@@ -71,7 +74,7 @@ export class GameScene {
     if(input.hit('KeyI')){this.openInventory();return;}
     if(input.hit('KeyC')){this.openCalendar();return;}
     if(input.hit('KeyQ')){this.switchBrother();return;}
-    this.players.older.update(dt,input,this.controlled==='older'&&this.playerFloors.older===this.floor);this.players.younger.update(dt,input,this.controlled==='younger'&&this.playerFloors.younger===this.floor);
+    this.players.older.update(dt,input,this.controlled==='older'&&this.playerFloors.older===this.floor,this.playerFloors.older==='shop'?this.world:null,null);this.players.younger.update(dt,input,this.controlled==='younger'&&this.playerFloors.younger===this.floor,this.playerFloors.younger==='shop'?this.world:null,null);
     if(input.hit('KeyE','Enter'))this.interact();
   }
   handleBrotherWorkEvents(events){
@@ -83,7 +86,7 @@ export class GameScene {
   switchBrother(){
     const next=this.controlled==='older'?'younger':'older',task=this.brotherWork.task(next);
     if(task?.kind==='craft'){this.ui.showToast(`${BROTHERS[next].name}이(가) 지금 제작 중이다. 끝나면 직접 조작할 수 있다.`);return;}
-    this.controlled=next;if(task?.kind==='role'){this.brotherWork.cancel(next);this.maintenance.assign(next,'idle');this.players[next].target=null;}
+    this.controlled=next;if(task?.kind==='role'){this.brotherWork.cancel(next);this.maintenance.assign(next,'idle');this.players[next].clearTarget?.();}
     this.floor=this.playerFloors[next];this.broomEquipped=false;this.ui.showToast(`${next==='older'?'형':'동생'}을 직접 조작한다.`);this.save();
   }
   updateShopTime(){
@@ -115,18 +118,30 @@ export class GameScene {
       this.ui.showToast(`재료 상인이 왔다. ${this.time.format(visit.end)}쯤까지 머문다${sale}`);this.save();
     }
   }
-  childWindow(){const start=620+(this.day*31)%115;return{start,end:start+165};}
+  childWindow(){const start=620+(this.day*31)%115;return{start,end:start+150};}
   updateChild(dt){
-    const w=this.childWindow();if(!this.childSpawned&&this.time.minute>=w.start){this.childSpawned=true;this.child.visible=true;this.child.x=602;this.child.y=318;this.childLeaveAt=w.end;this.game.sound.door();this.ui.showToast('후드 꼬마가 대장간 안을 기웃거리며 들어왔다.');}
-    if(this.child.visible){if(this.time.minute>=this.childLeaveAt){this.child.visible=false;return;}if(this.child.x>386){this.child.x-=30*dt;this.child.y-=10*dt;}}
+    if(!this.childWillVisit)return;const w=this.childWindow();
+    if(!this.childSpawned&&this.time.minute>=w.start){this.childSpawned=true;this.child.visible=true;this.child.x=586;this.child.y=318;this.childLeaveAt=w.end;this.kidFlags.visits++;this.game.sound.door();this.ui.showToast('후드 꼬마가 골목 소문을 들고 대장간에 찾아왔다.');}
+    if(this.child.visible){if(this.time.minute>=this.childLeaveAt){this.child.visible=false;delete this.child._childNav;return;}this.world.followPath(this.child,{x:420,y:218},dt,48,'CUSTOMER_ZONE',6,'_childNav');}
+  }
+  talkToChild(){
+    let line='';const roll=(this.day*19+this.kidFlags.visits*7)%100;
+    if(this.maintenance.cleanliness<58)line='여기 바닥 완전 더러워요. 입구랑 작업대 쪽도 한번 봐요!';
+    else if(this.merchantActiveVisit?.sale)line=`재료 상인 아저씨가 오늘 ${this.merchantActiveVisit.sale.label}라고 자랑하던데!`;
+    else if(this.events.activeEvent?.id==='goblins')line='오늘 시장에서 다들 북쪽 숲 고블린 이야기하던데! 모험가들이 장비 찾을 것 같아.';
+    else if(this.events.activeEvent?.id==='expedition')line='기사 아저씨들이 원정 간대. 검이랑 방패 많이 필요하지 않을까?';
+    else if(roll<20){this.inventory.addMaterial('wood',1);this.kidFlags.gifts++;line='길에서 멀쩡한 나무 조각 주웠어. 이거 써! 목재 +1';}
+    else{const tips=['아까 어떤 모험가가 이 대장간 어디냐고 물어봤어요.','오늘 시장에 여행자들이 좀 많던데?','형 아저씨 망치 소리는 골목 끝에서도 들려!'];line=tips[(this.day+this.kidFlags.visits)%tips.length];this.kidFlags.rumors++;}
+    if(this.economy.reputation>=25&&this.kidFlags.visits>=4&&!this.kidFlags.apprenticeHint){this.kidFlags.apprenticeHint=true;line+=' ...나중에 나도 대장장이 일 배워도 돼?';}
+    this.ui.openModal('후드 꼬마',line,[{label:'알려줘서 고마워'}]);this.save();
   }
   updateCustomers(dt){
-    const events=this.customer.update(dt,{minute:this.time.minute,open:this.shopOpen,event:this.events.activeEvent,patienceMultiplier:this.maintenance.counterPatienceMultiplier()});
+    const events=this.customer.update(dt,{minute:this.time.minute,open:this.shopOpen,event:this.events.activeEvent,patienceMultiplier:this.maintenance.counterPatienceMultiplier(),world:this.world,reputation:this.economy.reputation});
     for(const e of events){
-      const v=e.visitor;if(e.type==='spawn'){this.economy.markVisitor();this.game.sound.door();if(v.rude){this.flags.rudeEver=true;this.flags.rudeSeen=true;this.recentRudeTypes.unshift(v.rudeType||'compare');this.recentRudeTypes.splice(5);this.ui.showToast(`${v.name}이(가) 평범한 손님처럼 들어왔다.`);}else this.ui.showToast(v.mode==='general'?`${v.name}이(가) 진열대를 보러 들어왔다.`:`${v.name}이(가) 카운터로 온다.`);}
+      const v=e.visitor;if(e.type==='spawn'){this.economy.markVisitor();this.maintenance.noteActivity('customers',1);this.recordCustomerVisit(v);this.game.sound.door();if(v.rude){this.flags.rudeEver=true;this.flags.rudeSeen=true;this.recentRudeTypes.unshift(v.rudeType||'compare');this.recentRudeTypes.splice(5);this.ui.showToast(`${v.name}이(가) 평범한 손님처럼 들어왔다.`);}else if(v.special)this.ui.showToast(`✦ 소문을 듣고 ${v.name}이(가) 먼 길에서 찾아왔다.`);else if(v.isRegular)this.ui.showToast(`★ 단골 ${v.name}이(가) 다시 찾아왔다.`);else this.ui.showToast(v.mode==='general'?`${v.name}이(가) 진열대를 보러 들어왔다.`:`${v.name}이(가) 카운터로 온다.`);}
       else if(e.type==='waiting'){this.ui.showToast(v.knight?'기사 로데릭이 주문을 기다린다.':v.rude?'왠지 까다로워 보이는 손님이 기다린다.':`${v.name}이(가) 주문 상담을 기다린다.`);}
       else if(e.type==='browseComplete')this.resolveGeneralBuyer(v);
-      else if(e.type==='impatient'){if(v.status!=='leaving')this.customer.leave(v);this.economy.adjustRep(-1);this.ui.showToast(`${v.name}이(가) 오래 기다리다 나갔다. 평판 -1`);}
+      else if(e.type==='impatient'){if(v.status!=='leaving')this.customer.leave(v);this.economy.adjustRep(-1);this.checkRenownPromotion();this.ui.showToast(`${v.name}이(가) 오래 기다리다 나갔다. 명성 -1`);}
     }
   }
   resolveGeneralBuyer(v){
@@ -134,12 +149,12 @@ export class GameScene {
     if(!matches.length){v.bubble='찾는 게 없네...';v.bubbleT=2.5;this.customer.leave(v,'찾는 물건 없음');return;}
     matches.sort((a,b)=>v.preferences.indexOf(a.item.itemId)-v.preferences.indexOf(b.item.itemId)||b.item.score-a.item.score);const pick=matches[0],estimate=this.economy.priceFor(pick.item,this.events.activeEvent);const comfort=ITEMS[pick.item.itemId].price*(v.budget||1.1)*1.28;
     if(estimate>comfort&&Math.random()>.28){v.bubble='조금 비싼데...';v.bubbleT=2.5;this.customer.leave(v,'가격 고민');return;}
-    const item=this.display.take(pick.slot),cleanRep=this.maintenance.cleanliness>=82&&Math.random()<.22?1:0,result=this.economy.sell(item,this.events.activeEvent,{extraRep:cleanRep,channel:'display'});this.recordWeaponSale(item,v.name,result.price);this.game.sound.coin();v.bubble=`${result.price}G 구매`;v.bubbleT=2.8;this.customer.complete(v);this.ui.showToast(`${v.name}이(가) 진열된 ${item.trait?`${item.trait.name} `:''}${item.itemName}을 ${result.price}G에 샀다.`);this.save();
+    const item=this.display.take(pick.slot),cleanRep=this.maintenance.cleanliness>=82&&Math.random()<.22?1:0,result=this.economy.sell(item,this.events.activeEvent,{extraRep:cleanRep,channel:'display'});this.recordWeaponSale(item,v.name,result.price,v);this.recordCustomerPurchase(v,result.price,item.itemId);this.checkRenownPromotion();this.game.sound.coin();v.bubble=`${result.price}G 구매`;v.bubbleT=2.8;this.customer.complete(v);this.ui.showToast(`${v.name}이(가) 진열된 ${item.trait?`${item.trait.name} `:''}${item.itemName}을 ${result.price}G에 샀다.`);this.save();
   }
   updateCutscene(dt){
     if(!this.cutscene)return;const c=this.cutscene;c.timer-=dt;
     if(c.kind==='rudeOlder'){
-      const older=this.players.older;older.update(dt,this.game.input,false);
+      const older=this.players.older;older.update(dt,this.game.input,false,this.world,null);
       if(c.timer<=0){
         older.target=null;this.cutscene=null;const v=this.customer.byId(c.visitorId);
         if(v){
@@ -179,11 +194,11 @@ export class GameScene {
       const protectedNpc=this.nearestProtectedNPC();if(protectedNpc&&protectedNpc.d<50){this.ui.showToast(`${protectedNpc.name}에게 휘두를 필요는 없잖아. 빗자루는 진상 퇴치나 청소에만 쓴다.`);return;}
     }
     const waiting=this.customer.nearestWaiting(p.x,p.y);if(waiting&&Math.hypot(p.x-waiting.x,p.y-waiting.y)<58){this.interactCustomer(waiting);return;}
-    if(this.child.visible&&this.dist(this.child.x,this.child.y)<46){this.ui.openModal('후드 꼬마',CHILD_LINES[Math.floor(Math.random()*CHILD_LINES.length)],[{label:'구경만 해'}]);return;}
+    if(this.child.visible&&this.dist(this.child.x,this.child.y)<46){this.talkToChild();return;}
     if(this.merchantVisible&&this.dist(this.merchant.x,this.merchant.y)<50){this.openMerchant();return;}
     const other=this.nearestOtherBrother();if(other.d<38){this.openBrotherRole(other.id);return;}
     const dirt=this.nearestDirt();if(dirt&&dirt.d<30){this.ui.showToast('바닥이 지저분하다. 빗자루를 집어 들고 이곳에서 E를 누르면 청소한다.');return;}
-    const near=Object.entries(STATIONS).map(([id,s])=>({id,s,d:this.dist(s.x+s.w/2,s.y+s.h/2)})).sort((a,b)=>a.d-b.d)[0];if(!near||near.d>60){this.ui.showToast(this.broomEquipped?'빗자루를 들고 있다. 진상이나 먼지 가까이에서 E를 누르자.':'상호작용할 대상이 가까이 없다.');return;}this.useStation(near.id);
+    const near=Object.entries(STATIONS).map(([id,st])=>{const ip=INTERACTION_POINTS[id]||{x:st.x+st.w/2,y:st.y+st.h/2};return{id,s:st,d:this.dist(ip.x,ip.y)};}).sort((a,b)=>a.d-b.d)[0];if(!near||near.d>60){this.ui.showToast(this.broomEquipped?'빗자루를 들고 있다. 진상이나 먼지 가까이에서 E를 누르자.':'상호작용할 대상이 가까이 없다.');return;}this.useStation(near.id);
   }
   interactLoft(){
     const near=Object.entries(LOFT_STATIONS).map(([id,s])=>({id,s,d:this.dist(s.x+s.w/2,s.y+s.h/2)})).sort((a,b)=>a.d-b.d)[0];if(!near||near.d>62){this.ui.showToast('2층 생활공간이다. 침대나 계단 가까이에서 E를 누르자.');return;}this.useLoftStation(near.id);
@@ -258,7 +273,7 @@ export class GameScene {
     });
   }
   startOlderIntimidation(v){
-    v.rudeResolved=true;this.playerFloors.older='shop';this.players.older.target={x:446,y:244};this.cutscene={kind:'rudeOlder',timer:1.35,visitorId:v.id};this.ui.showToast('형이 말없이 카운터 앞으로 걸어간다...');
+    v.rudeResolved=true;this.playerFloors.older='shop';this.players.older.setTarget?.(410,246,this.world,null);this.cutscene={kind:'rudeOlder',timer:1.35,visitorId:v.id};this.ui.showToast('형이 말없이 카운터 앞으로 걸어간다...');
   }
   openRude(v,item){
     const type=v.rudeType||'compare',def=RUDE_TYPES[type]||RUDE_TYPES.compare,estimated=this.economy.priceFor(item,this.events.activeEvent,v.extraMultiplier||1);
@@ -268,34 +283,41 @@ export class GameScene {
     if(type==='changes')gripe='완성품을 보자 길이, 손잡이 색, 장식까지 갑자기 더 바꿔달라고 한다.';
     this.ui.openModal(def.name,`${gripe} 현재 가격 ${estimated}G.`,[{label:'15% 할인'},{label:'정가 고수'},{label:'동생이 설득'},{label:'형을 부른다'},{label:'직접 내보낸다'}],i=>{
       if(i===0){v.rudeResolved=true;this.finishDirectSale(v,.85,1,item);}
-      else if(i===1){v.rudeResolved=true;this.economy.adjustRep(-1);this.customer.leave(v,'투덜거리며 퇴장');this.ui.showToast('거래는 깨졌고 완성품은 창고에 남았다. 평판 -1');this.save();}
+      else if(i===1){v.rudeResolved=true;this.economy.adjustRep(-1);this.customer.leave(v,'투덜거리며 퇴장');this.ui.showToast('거래는 깨졌고 완성품은 창고에 남았다. 명성 -1');this.save();}
       else if(i===2){v.rudeResolved=true;this.ui.openModal('동생의 설득','재료값뿐 아니라 공임·정밀도·마감까지 차분하게 설명한다. 손님은 슬쩍 말을 줄이고 정가를 내기로 했다.',[{label:'정가 판매'}],()=>this.finishDirectSale(v,1,1,item));}
       else if(i===3)this.startOlderIntimidation(v);
       else{v.rudeResolved=false;v.bubble='안 나갈 건데?';v.bubbleT=3;this.ui.showToast('진상이 버틴다. 빗자루를 들고 가까이 가서 E를 누르면 직접 쫓아낼 수 있다.');this.save();}
     });
   }
   finishCreditSale(v,item){
-    if(!item)return;this.inventory.removeItem(item.uid);const listed=this.economy.priceFor(item,this.events.activeEvent);this.debts[v.name]=(this.debts[v.name]||0)+listed;this.recordWeaponSale(item,v.name,listed);this.customer.complete(v);this.ui.openModal('외상 장부',`${v.name}에게 ${item.trait?`${item.trait.name} `:''}${item.itemName}을 외상으로 넘겼다. 이번 외상 ${listed}G · 총 빚 ${this.debts[v.name]}G. Gold는 아직 들어오지 않았다.`,[{label:'장부에 적는다'}]);this.save();
+    if(!item)return;this.inventory.removeItem(item.uid);const listed=this.economy.priceFor(item,this.events.activeEvent);this.debts[v.name]=(this.debts[v.name]||0)+listed;this.recordWeaponSale(item,v.name,listed,v);this.recordCustomerPurchase(v,listed,item.itemId);this.customer.complete(v);this.ui.openModal('외상 장부',`${v.name}에게 ${item.trait?`${item.trait.name} `:''}${item.itemName}을 외상으로 넘겼다. 이번 외상 ${listed}G · 총 빚 ${this.debts[v.name]}G. Gold는 아직 들어오지 않았다.`,[{label:'장부에 적는다'}]);this.save();
   }
   finishDirectSale(v,discount=1,extraRep=0,itemOverride=null){
     const item=itemOverride||this.inventory.bestItem(v.acceptedItem);if(!item)return;
     this.inventory.removeItem(item.uid);
     const result=this.economy.sell(item,this.events.activeEvent,{discount,extraRep,extraMultiplier:v.extraMultiplier||1,channel:'order'});
-    this.recordWeaponSale(item,v.name,result.price);
+    this.recordWeaponSale(item,v.name,result.price,v);this.recordCustomerPurchase(v,result.price,item.itemId);this.checkRenownPromotion();
     if(v.knight)this.knightPurchase={buyer:v.name,itemName:item.itemName,itemId:item.itemId,quality:item.quality,qualityName:QUALITY[item.quality].name,trait:item.trait||null,maker:item.maker,makerName:item.makerName,day:this.day,purchaseDate:this.calendar.format()};
     this.customer.complete(v);this.game.sound.coin();
     const trait=item.trait?` · 특성 ${item.trait.name}`:'';
-    this.ui.openModal('판매 완료',`${v.name}에게 ${item.itemName}을(를) ${result.price}G에 판매했다. 품질 ${QUALITY[item.quality].name}${trait} · 평판 +${result.rep}`, [{label:'좋아'}]);this.save();
+    this.ui.openModal('판매 완료',`${v.name}에게 ${item.itemName}을(를) ${result.price}G에 판매했다. 품질 ${QUALITY[item.quality].name}${trait} · 명성 +${result.rep}`, [{label:'좋아'}]);this.save();
   }
-  recordWeaponSale(item,buyer,price=null){
-    const history={customerId:String(buyer).replace(/\s/g,'_'),customerName:buyer,purchaseDate:this.calendar.format(),day:this.day,itemId:item.itemId,itemName:item.itemName,quality:item.quality,qualityName:QUALITY[item.quality].name,trait:item.trait?{...item.trait}:null,price:price??this.economy.priceFor(item,this.events.activeEvent),repairCount:0};
+  recordWeaponSale(item,buyer,price=null,visitor=null){
+    const history={customerId:visitor?.customerId||String(buyer).replace(/\s/g,'_'),customerName:buyer,purchaseDate:this.calendar.format(),day:this.day,itemId:item.itemId,itemName:item.itemName,quality:item.quality,qualityName:QUALITY[item.quality].name,trait:item.trait?{...item.trait}:null,price:price??this.economy.priceFor(item,this.events.activeEvent),repairCount:0};
     this.customerHistory.unshift(history);this.customerHistory=this.customerHistory.slice(0,50);
     if(item.quality==='excellent'||item.quality==='master'){
       this.weaponHistory.unshift({itemName:item.itemName,itemId:item.itemId,makerName:item.makerName,qualityName:QUALITY[item.quality].name,trait:item.trait?{...item.trait}:null,buyer,day:this.day,purchaseDate:this.calendar.format()});this.weaponHistory=this.weaponHistory.slice(0,20);
     }
   }
+  recordCustomerVisit(v){
+    const id=v.customerId||`${v.type}:${v.name}`,p=this.customerProfiles[id]||{customerId:id,name:v.name,type:v.type,visitCount:0,purchaseCount:0,totalSpent:0,relationship:0,lastVisitDay:0,isRegular:false,preferredItems:[...(v.preferences||[])]};p.visitCount++;p.lastVisitDay=this.day;p.name=v.name;p.type=v.type;p.preferredItems=[...(v.preferences||p.preferredItems||[])];p.isRegular=p.isRegular||p.visitCount>=3||(p.purchaseCount>=2&&p.relationship>=4);this.customerProfiles[id]=p;v.isRegular=p.isRegular;
+  }
+  recordCustomerPurchase(v,price,itemId){const id=v?.customerId||`${v?.type||'customer'}:${v?.name||'손님'}`,p=this.customerProfiles[id]||{customerId:id,name:v?.name||'손님',type:v?.type||'customer',visitCount:1,purchaseCount:0,totalSpent:0,relationship:0,lastVisitDay:this.day,isRegular:false,preferredItems:[]};p.purchaseCount++;p.totalSpent+=price||0;p.relationship+=2;p.lastVisitDay=this.day;if(itemId&&!p.preferredItems.includes(itemId))p.preferredItems.unshift(itemId);p.preferredItems=p.preferredItems.slice(0,4);p.isRegular=p.isRegular||p.visitCount>=3||(p.purchaseCount>=2&&p.relationship>=4);this.customerProfiles[id]=p;}
+  regularCount(){return Object.values(this.customerProfiles).filter(p=>p.isRegular).length;}
+  checkRenownPromotion(){const next=RenownSystem.tierIndex(this.economy.reputation);if(next>this.renownTier){this.renownTier=next;const tier=RenownSystem.tier(this.economy.reputation);this.ui.openModal(`명성 ${this.economy.reputation} 달성`,`${tier.name}. 형제의 대장간 이야기가 더 넓게 퍼지기 시작했습니다. 새로운 손님과 재방문 손님의 질이 달라질 수 있습니다.`,[{label:'계속 장사한다'}]);}else this.renownTier=next;}
+  renownInfo(){return RenownSystem.progress(this.economy.reputation);}
   useStation(id){
-    if(id==='sign'){this.toggleShop();return;}if(id==='stairs'){this.goUpstairs();return;}if(id==='broom'){this.toggleBroom();return;}if(id==='storage'){this.openInventory();return;}if(id==='display'){this.openDisplay();return;}if(id==='counter'){this.openCounter();return;}
+    if(id==='sign'){this.toggleShop();return;}if(id==='stairs'){this.goUpstairs();return;}if(id==='broom'){this.toggleBroom();return;}if(id==='storage'){this.openInventory();return;}if(id==='display'){this.openDisplay();return;}if(id==='counter'){this.openCounter();return;}if(id==='fuel'){this.openFuelActions();return;}if(id==='door'){this.ui.showToast('문 밖 마을은 아직 구현하지 않았다. 지금은 대장간 운영에 집중하자.');return;}
     if(['bench','forge','anvil','grind','water'].includes(id)){this.useCraftStation(id);return;}
   }
   useLoftStation(id){
@@ -306,16 +328,22 @@ export class GameScene {
     if(id==='lamp'){this.ui.showToast('조용한 등불이 2층 생활공간을 따뜻하게 밝힌다.');return;}
   }
   goUpstairs(){
-    this.playerFloors[this.controlled]='loft';this.floor='loft';const p=this.controlledPlayer();p.x=532;p.y=276;p.target=null;this.broomEquipped=false;this.ui.showToast('계단을 올라 2층 생활공간으로 왔다. 1층 영업과 시간은 계속 흐른다.');this.save();
+    this.playerFloors[this.controlled]='loft';this.floor='loft';const p=this.controlledPlayer();p.x=532;p.y=276;p.clearTarget?.();this.broomEquipped=false;this.ui.showToast('계단을 올라 2층 생활공간으로 왔다. 1층 영업과 시간은 계속 흐른다.');this.save();
   }
   goDownstairs(){
-    this.playerFloors[this.controlled]='shop';this.floor='shop';const p=this.controlledPlayer();p.x=286;p.y=302;p.target=null;this.ui.showToast('1층 대장간으로 내려왔다.');this.save();
+    this.playerFloors[this.controlled]='shop';this.floor='shop';const p=this.controlledPlayer();p.x=96;p.y=250;p.clearTarget?.();this.ui.showToast('1층 대장간으로 내려왔다.');this.save();
   }
   toggleBroom(){
     this.broomEquipped=!this.broomEquipped;this.ui.showToast(this.broomEquipped?'빗자루를 들었다. 먼지나 진상 가까이에서 E를 누르자.':'빗자루를 제자리에 세워뒀다.');this.save();
   }
   toggleShop(){if(this.time.minute>=1320){this.ui.showToast('22:00 이후에는 다시 문을 열 수 없다.');return;}this.shopOpen=!this.shopOpen;this.game.sound.door();this.ui.showToast(this.shopOpen?`${this.time.format()} · OPEN. 이제 손님이 랜덤하게 찾아온다.`:`${this.time.format()} · CLOSED. 안에 있는 손님은 마지막 거래를 할 수 있다.`);this.save();}
-  useBed(){if(this.time.minute<1320){this.ui.openModal('2층 침대',`현재 ${this.time.format()}. 아직 영업 마감 전이다. 22:00 이후부터 잠들 수 있다.`,[{label:'조금 더 일한다'}]);return;}if(this.customer.activeCount()>0){this.ui.showToast('아직 1층 대장간 안에 손님이 남아 있다. 마지막 거래를 마치거나 기다리자.');return;}const working=['older','younger'].find(id=>this.brotherWork.task(id)?.kind==='craft');if(working){this.ui.showToast(`${BROTHERS[working].name}이(가) 아직 1층에서 제작 중이다. 작업이 끝나면 자자.`);return;}const m=this.time.minute%1440,condition=(this.time.minute<1440||m===0)?'rested':'normal';this.beginSleep(condition,false);}
+  useBed(){
+    if(this.shopOpen){this.ui.openModal('2층 침대','영업 중에는 잠들 수 없습니다. 먼저 1층 영업 표지판을 CLOSED로 바꿔주세요.',[{label:'알겠어'}]);return;}
+    const active=this.customer.activeCount(),working=['older','younger'].find(id=>this.brotherWork.task(id)?.kind==='craft'),orders=this.orders.openOrders().length,crafting=!!this.crafting.active;
+    const warnings=[];if(active)warnings.push(`1층에 손님 ${active}명`);if(working)warnings.push(`${BROTHERS[working].name} 자동 제작 중`);if(crafting)warnings.push('직접 제작 진행 중');if(orders)warnings.push(`미완료 주문 ${orders}건`);
+    const warning=warnings.length?` 주의: ${warnings.join(' · ')}. 그래도 오늘을 끝내면 진행 중 상황이나 주문에 기존 규칙의 불이익이 생길 수 있습니다.`:'';
+    const nextCal=new CalendarSystem(this.calendar.toJSON());nextCal.advance();this.ui.openModal('오늘을 마칠까?',`현재 ${this.time.format()} · 대장간 CLOSED.${warning} 내일은 ${nextCal.month}월 ${nextCal.day}일 06:00에 시작합니다.`,[{label:'잠든다'},{label:'취소'}],i=>{if(i===0){if(active){for(const v of [...this.customer.visitors])this.customer.leave(v,'영업 종료');}if(crafting)this.crafting.active=null;this.beginSleep('normal',false);}});
+  }
   forceSleep(){
     if(this.customer.activeCount()){for(const v of [...this.customer.visitors])this.customer.leave(v,'주인이 쓰러졌다');this.economy.adjustRep(-1);}this.shopOpen=false;this.beginSleep('tired',true);
   }
@@ -326,18 +354,19 @@ export class GameScene {
   nextDay(condition){
     this.day++;this.calendar.advance();this.events.advance();this.time=new TimeSystem({minute:360,speed:1});this.shopOpen=false;this.closingNotified=false;this.economy.resetDay();this.customer=new CustomerSystem(this.day,this.stateForData(),null);this.maintenance.condition=condition;
     for(const id of ['older','younger']){
-      const task=this.brotherWork.task(id);if(task?.kind==='role')this.brotherWork.cancel(id);this.maintenance.assign(id,'idle');this.players[id].target=null;
+      const task=this.brotherWork.task(id);if(task?.kind==='role')this.brotherWork.cancel(id);this.maintenance.assign(id,'idle');this.players[id].clearTarget?.();
       if(task?.kind==='craft'){this.playerFloors[id]='shop';}
       else{this.playerFloors[id]='loft';if(id==='older'){this.players[id].x=144;this.players[id].y=250;}else{this.players[id].x=286;this.players[id].y=250;}}
     }
-    this.floor=this.playerFloors[this.controlled];this.merchantSeenVisits=new Set();this.merchantActiveVisit=null;this.merchantVisible=false;this.child.visible=false;this.childSpawned=false;this.childLeaveAt=0;this.morningShown=false;this.broomEquipped=false;this.orders.failOverdue(this.day,this.time.minute);
+    this.floor=this.playerFloors[this.controlled];this.merchantSeenVisits=new Set();this.merchantActiveVisit=null;this.merchantVisible=false;this.child.visible=false;this.childSpawned=false;this.childLeaveAt=0;this.childWillVisit=((this.day*47+13)%100)<45;this.morningShown=false;this.broomEquipped=false;this.orders.failOverdue(this.day,this.time.minute);
     this.save(true);this.showMorningNews();
   }
-  cleanShop(){if(!this.maintenance.dirtSpots.length&&this.maintenance.cleanliness>94){this.ui.showToast('바닥은 이미 꽤 깨끗하다.');return;}const n=this.maintenance.clean();this.time.minute+=8;this.ui.showToast(`대장간을 한 번에 쓸어냈다. 먼지 ${n}곳 정리 · 게임 시간 8분 사용`);this.save();}
+  cleanShop(){if(!this.maintenance.dirtSpots.length&&this.maintenance.cleanliness>94){this.ui.showToast('바닥은 이미 꽤 깨끗하다.');return;}const near=this.nearestDirt(),spot=near?.p,n=this.maintenance.clean(near?.i??null);this.time.minute+=3;this.ui.showToast(`${spot?.type||'먼지'} ${n}곳을 쓸어냈다 · 게임 시간 3분`);this.save();}
   useCraftStation(id){
     if(!this.crafting.active){if(id==='bench'){this.openCraftMenu();return;}if(id==='forge'){this.openForgeActions();return;}if(id==='grind'){this.openGrindActions();return;}this.ui.showToast('작업대에서 먼저 무엇을 만들지 정하자.');return;}
     const stage=this.crafting.currentStage();if(!stage){return;}if(stage.station!==id){this.ui.showToast(`다음 공정은 ${stationName(stage.station)} · ${stage.label}`);return;}const a=this.crafting.active,worker=BROTHERS[a.workerId];this.ui.beginCraft(stage,this.crafting.speedMultiplier(),(score,precision)=>this.finishCraftStage(score,precision),{itemName:ITEMS[a.itemId].name,workerName:worker.name});
   }
+  openFuelActions(){this.ui.openModal('장작 · 석탄 저장','화로 바로 옆에 장작과 석탄을 쌓아두었다. V0.2.5에서는 별도 연료 소비 대신 기존 화로 준비 보너스와 연결한다.',[{label:'화로 연료 정리 · 6분'},{label:'닫기'}],i=>{if(i===0){this.maintenance.prepForge();this.maintenance.noteActivity('forge',1);this.time.minute+=6;this.ui.showToast('연료 정리 완료 · 다음 가열 3회 품질 보너스');this.save();}});}
   openForgeActions(){this.ui.openModal('화로','제작 중인 물건이 없다. 영업 전에 화로를 정비하면 다음 3번의 가열 공정 품질이 조금 좋아진다.',[{label:'화로 준비 · 6분'},{label:'닫기'}],i=>{if(i===0){this.maintenance.prepForge();this.time.minute+=6;this.ui.showToast('화로 준비 완료 · 다음 가열 3회 품질 보너스');this.save();}});}
   openGrindActions(){this.ui.openModal('숫돌','숫돌을 손보면 다음 3번의 연마 공정 품질이 조금 좋아진다.',[{label:'숫돌 관리 · 5분'},{label:'닫기'}],i=>{if(i===0){this.maintenance.tuneGrind();this.time.minute+=5;this.ui.showToast('숫돌 관리 완료 · 다음 연마 3회 품질 보너스');this.save();}});}
   openCraftMenu(){
@@ -346,19 +375,19 @@ export class GameScene {
   chooseCraftWorker(itemId){
     const recipe=ITEMS[itemId];if(!this.inventory.canAfford(recipe)){const m=this.inventory.materials;this.ui.openModal('재료 부족',`${recipe.name} 필요: 철 ${recipe.iron} · 목재 ${recipe.wood} · 가죽 ${recipe.leather}. 현재 철 ${m.iron} · 목재 ${m.wood} · 가죽 ${m.leather}.`,[{label:'확인'}]);return;}
     this.ui.openModal('누가 작업할까',`${recipe.name} 제작. 직접 조작 중인 형제에게 맡기면 기존 미니게임으로 직접 만들고, 다른 형제에게 맡기면 실제 작업대로 이동해 자동으로 끝까지 제작한다.`,[{label:'형'},{label:'동생'}],i=>{
-      const worker=i===0?'older':'younger';this.maintenance.assign(worker,'idle');this.players[worker].target=null;
+      const worker=i===0?'older':'younger';this.maintenance.assign(worker,'idle');this.players[worker].clearTarget?.();
       if(worker===this.controlled){
         if(this.brotherWork.busy(worker)){this.ui.showToast(`${BROTHERS[worker].name}은(는) 자동 업무 중이다. 먼저 업무를 끝내거나 해제하자.`);return;}
         const r=this.crafting.begin(itemId,worker,this.inventory);if(!r.ok){this.ui.showToast(r.reason);return;}this.ui.showToast(`${BROTHERS[worker].name} 직접 제작 시작 · 첫 공정 ${stationName(r.stage.station)} / ${r.stage.label}`);this.save();return;
       }
       const currentTask=this.brotherWork.task(worker);if(currentTask?.kind==='craft'){this.ui.showToast(`${BROTHERS[worker].name}은(는) 이미 다른 제작을 하는 중이다.`);return;}if(currentTask?.kind==='role')this.brotherWork.cancel(worker);
-      const wasFloor=this.playerFloors[worker];this.playerFloors[worker]='shop';if(wasFloor!=='shop'){this.players[worker].x=292;this.players[worker].y=304;}
+      const wasFloor=this.playerFloors[worker];this.playerFloors[worker]='shop';if(wasFloor!=='shop'){this.players[worker].x=worker==='older'?308:350;this.players[worker].y=300;}
       const r=this.brotherWork.assignCraft(worker,itemId,this.inventory);if(!r.ok){this.ui.showToast(r.reason);return;}
       this.ui.showToast(`${BROTHERS[worker].name}에게 ${recipe.name} 제작을 맡겼다. 알아서 작업대를 돌며 완성한다.`);this.save();
     });
   }
   finishCraftStage(score,precision={perfectHits:0,stagePerfect:false}){
-    const stage=this.crafting.currentStage(),workerId=this.crafting.active?.workerId;let bonus=this.maintenance.qualityConditionBonus();if(stage?.station==='forge')bonus+=this.maintenance.useForgeBoost();if(stage?.station==='grind')bonus+=this.maintenance.useGrindBoost();if(workerId==='older'&&['hammer','rivet'].includes(stage?.kind))bonus+=4;if(workerId==='younger'&&['grind','assemble','string','test'].includes(stage?.kind))bonus+=3;if(this.maintenance.roles.older==='forge'&&workerId!=='older'&&['forge','anvil'].includes(stage?.station))bonus+=3;if(this.maintenance.roles.younger==='grind'&&workerId!=='younger'&&['grind','bench'].includes(stage?.station))bonus+=2;
+    const stage=this.crafting.currentStage(),workerId=this.crafting.active?.workerId;if(stage?.station)this.maintenance.noteActivity(['forge','anvil','water','grind','bench'].includes(stage.station)?stage.station:'counter',1);let bonus=this.maintenance.qualityConditionBonus();if(stage?.station==='forge')bonus+=this.maintenance.useForgeBoost();if(stage?.station==='grind')bonus+=this.maintenance.useGrindBoost();if(workerId==='older'&&['hammer','rivet'].includes(stage?.kind))bonus+=4;if(workerId==='younger'&&['grind','assemble','string','test'].includes(stage?.kind))bonus+=3;if(this.maintenance.roles.older==='forge'&&workerId!=='older'&&['forge','anvil'].includes(stage?.station))bonus+=3;if(this.maintenance.roles.younger==='grind'&&workerId!=='younger'&&['grind','bench'].includes(stage?.station))bonus+=2;
     const r=this.crafting.stageDone(score,bonus,precision);if(!r)return;
     const perfect=precision?.stagePerfect?' · PERFECT!':'';
     if(!r.done){this.ui.showToast(`공정 점수 ${r.score}${perfect} · 다음 ${stationName(r.stage.station)} / ${r.stage.label}`);this.save();return;}
@@ -378,7 +407,7 @@ export class GameScene {
     const text=open.length?open.slice(0,4).map(o=>`${o.id} ${ITEMS[o.itemId].name} · Day ${o.dueDay} 18:00`).join(' · '):'현재 미납 주문이 없다.';this.ui.openModal('카운터 주문장',text,[{label:'닫기'}]);
   }
   fulfillCommission(id){
-    const o=this.orders.openOrders().find(x=>x.id===id);if(!o)return;const item=this.inventory.bestItem(o.itemId);if(!item){this.ui.showToast('맞는 완성품이 없다.');return;}this.inventory.removeItem(item.uid);this.orders.markDone(id,item);const result=this.economy.sell(item,this.events.activeEvent,{extraMultiplier:1+(o.rewardBonus||.15),extraRep:1,channel:'order'});this.recordWeaponSale(item,o.customerName,result.price);this.game.sound.coin();this.ui.openModal('주문 납품 완료',`${o.customerName}의 ${item.trait?`${item.trait.name} `:''}${ITEMS[o.itemId].name} 주문을 납품했다. ${result.price}G · 평판 +${result.rep}`, [{label:'확인'}]);this.save();
+    const o=this.orders.openOrders().find(x=>x.id===id);if(!o)return;const item=this.inventory.bestItem(o.itemId);if(!item){this.ui.showToast('맞는 완성품이 없다.');return;}this.inventory.removeItem(item.uid);this.orders.markDone(id,item);const result=this.economy.sell(item,this.events.activeEvent,{extraMultiplier:1+(o.rewardBonus||.15),extraRep:1,channel:'order'});this.recordWeaponSale(item,o.customerName,result.price);this.recordCustomerPurchase({name:o.customerName,customerId:`order:${o.customerName}`,type:'order'},result.price,item.itemId);this.checkRenownPromotion();this.game.sound.coin();this.ui.openModal('주문 납품 완료',`${o.customerName}의 ${item.trait?`${item.trait.name} `:''}${ITEMS[o.itemId].name} 주문을 납품했다. ${result.price}G · 명성 +${result.rep}`, [{label:'확인'}]);this.save();
   }
   openMerchant(){
     const visit=this.merchantActiveVisit||this.merchantSchedule().find(v=>this.time.minute>=v.start&&this.time.minute<=v.end);if(!visit){this.ui.showToast('상인은 지금 자리를 비웠다.');return;}
@@ -417,13 +446,13 @@ export class GameScene {
   roleName(role){return role==='counter'?'카운터':role==='forge'?'화로·중량 보조':role==='grind'?'연마·정밀 보조':'대기';}
   assignRole(id,role){
     const current=this.brotherWork.task(id);if(current?.kind==='craft'){this.ui.showToast(`${BROTHERS[id].name}은(는) 지금 제작 중이다. 끝난 뒤 다른 업무를 맡길 수 있다.`);return;}
-    this.maintenance.assign(id,role);const wasFloor=this.playerFloors[id];this.playerFloors[id]='shop';if(wasFloor!=='shop'){this.players[id].x=292;this.players[id].y=304;}
-    this.brotherWork.assignRole(id,role);if(role==='idle'){this.players[id].target={x:id==='older'?250:330,y:260};}
+    this.maintenance.assign(id,role);const wasFloor=this.playerFloors[id];this.playerFloors[id]='shop';if(wasFloor!=='shop'){this.players[id].x=id==='older'?308:350;this.players[id].y=300;}
+    this.brotherWork.assignRole(id,role);if(role==='idle'){this.players[id].setTarget?.(id==='older'?305:350,300,this.world,null);}
     this.ui.showToast(`${BROTHERS[id].name}에게 ${this.roleName(role)} 업무를 맡겼다. 목적지까지 이동해 계속 수행한다.`);this.save();
   }
   timeLabel(){return `${this.time.format()} · ${this.time.dayPart()}`;}
   snapshot(tutorialSeen=true){
-    return{saveVersion:3,version:3,day:this.day,calendar:this.calendar.toJSON(),rent:this.rent.toJSON(),gold:this.economy.gold,reputation:this.economy.reputation,dayStats:this.economy.dayStats,time:this.time.toJSON(),shopOpen:this.shopOpen,inventory:this.inventory.toJSON(),display:this.display.toJSON(),orders:this.orders.toJSON(),maintenance:this.maintenance.toJSON(),brotherWork:this.brotherWork.toJSON(),activeEvent:this.events.activeEvent,nextEvent:this.events.nextEvent,crafting:this.crafting.toJSON(),customer:this.customer.toJSON(),weaponHistory:this.weaponHistory,customerHistory:this.customerHistory,debts:this.debts,recentRudeTypes:this.recentRudeTypes,knightPurchase:this.knightPurchase,flags:this.flags,controlled:this.controlled,floor:this.floor,playerFloors:{...this.playerFloors},players:{older:{x:this.players.older.x,y:this.players.older.y},younger:{x:this.players.younger.x,y:this.players.younger.y}},child:{visible:this.child.visible,x:this.child.x,y:this.child.y,spawned:this.childSpawned,leaveAt:this.childLeaveAt},merchantSeenVisits:[...this.merchantSeenVisits],broomEquipped:this.broomEquipped,closingNotified:this.closingNotified,morningShown:this.morningShown,tutorialSeen,playTimeSeconds:this.playTimeSeconds};
+    return{saveVersion:4,version:4,day:this.day,calendar:this.calendar.toJSON(),rent:this.rent.toJSON(),gold:this.economy.gold,reputation:this.economy.reputation,renownTier:this.renownTier,dayStats:this.economy.dayStats,time:this.time.toJSON(),shopOpen:this.shopOpen,inventory:this.inventory.toJSON(),display:this.display.toJSON(),orders:this.orders.toJSON(),maintenance:this.maintenance.toJSON(),brotherWork:this.brotherWork.toJSON(),activeEvent:this.events.activeEvent,nextEvent:this.events.nextEvent,crafting:this.crafting.toJSON(),customer:this.customer.toJSON(),weaponHistory:this.weaponHistory,customerHistory:this.customerHistory,customerProfiles:this.customerProfiles,debts:this.debts,recentRudeTypes:this.recentRudeTypes,knightPurchase:this.knightPurchase,flags:this.flags,controlled:this.controlled,floor:this.floor,playerFloors:{...this.playerFloors},players:{older:{x:this.players.older.x,y:this.players.older.y},younger:{x:this.players.younger.x,y:this.players.younger.y}},child:{visible:this.child.visible,x:this.child.x,y:this.child.y,spawned:this.childSpawned,leaveAt:this.childLeaveAt,willVisit:this.childWillVisit},kidFlags:this.kidFlags,merchantSeenVisits:[...this.merchantSeenVisits],broomEquipped:this.broomEquipped,closingNotified:this.closingNotified,morningShown:this.morningShown,tutorialSeen,playTimeSeconds:this.playTimeSeconds};
   }
   saveManual(slot){const ok=SaveSystem.saveSlot(slot,this.snapshot(true));if(!ok)this.ui.showToast('저장에 실패했다. 브라우저 저장공간을 확인해 주세요.');return ok;}
   loadFromSlot(slot){const data=SaveSystem.load(slot);if(!data){this.ui.showToast('저장 데이터를 불러올 수 없다.');return;}this.game.sound.setDucked(false);this.game.sound.startBGM();this.game.scenes.set(GameScene,{save:data,loadedSlot:slot});}
@@ -431,11 +460,17 @@ export class GameScene {
   save(tutorialSeen=true){SaveSystem.saveAuto(this.snapshot(tutorialSeen));}
   render(ctx){
     if(this.floor==='shop'){
-      renderShop(ctx,this.t,{display:this.display,shopOpen:this.shopOpen,cleanliness:this.maintenance.cleanliness,minute:this.time.minute});drawDirt(ctx,this.maintenance.dirtSpots);
-      for(const id of ['older','younger'])if(this.playerFloors[id]==='shop'){drawCharacter(ctx,id,this.players[id].x,this.players[id].y,this.players[id].walkT,this.controlled===id);this.renderWorkerStatus(ctx,id);}
-      if(this.merchantVisible){drawCharacter(ctx,'merchant',this.merchant.x,this.merchant.y,0,false);ctx.fillStyle='#edd7ad';ctx.font='8px monospace';ctx.fillText('재료 상인',126,336);if(this.merchantActiveVisit?.sale){ctx.fillStyle='#f2c66f';ctx.font='bold 8px monospace';ctx.fillText(`SALE ${this.merchantActiveVisit.sale.label}`,112,346);}}
-      if(this.child.visible)drawCharacter(ctx,'child',this.child.x,this.child.y,this.t*3,false);
-      for(const v of this.customer.visitors){drawCharacter(ctx,v.knight?'knight':v.type,v.x,v.y,this.t*4,false);this.renderVisitorStatus(ctx,v);if(v.hitStarT>0)this.renderHitStars(ctx,v);}
+      renderShopBase(ctx,this.t,{display:this.display,shopOpen:this.shopOpen,cleanliness:this.maintenance.cleanliness,minute:this.time.minute});
+      drawDirt(ctx,this.maintenance.dirtSpots);
+      const drawables=getShopDrawables(ctx,this.t,{display:this.display,shopOpen:this.shopOpen});
+      for(const id of ['older','younger'])if(this.playerFloors[id]==='shop'){const p=this.players[id];drawables.push({id:`player-${id}`,baseY:Math.round(p.y),draw:()=>drawCharacter(ctx,id,p.x,p.y,p.walkT,this.controlled===id)});}
+      if(this.merchantVisible)drawables.push({id:'merchant-npc',baseY:Math.round(this.merchant.y),draw:()=>drawCharacter(ctx,'merchant',this.merchant.x,this.merchant.y,0,false)});
+      if(this.child.visible)drawables.push({id:'child-npc',baseY:Math.round(this.child.y),draw:()=>drawCharacter(ctx,'child',this.child.x,this.child.y,this.t*3,false)});
+      for(const v of this.customer.visitors)drawables.push({id:`customer-${v.id}`,baseY:Math.round(v.y),draw:()=>drawCharacter(ctx,v.knight?'knight':v.type,v.x,v.y,this.t*4,false)});
+      drawables.sort((a,b)=>a.baseY-b.baseY).forEach(d=>d.draw());
+      for(const id of ['older','younger'])if(this.playerFloors[id]==='shop')this.renderWorkerStatus(ctx,id);
+      if(this.merchantVisible){ctx.fillStyle='#f3dfbb';ctx.font='9px "Malgun Gothic", system-ui, sans-serif';ctx.fillText('재료 상인',Math.round(this.merchant.x-26),Math.round(this.merchant.y-43));if(this.merchantActiveVisit?.sale){ctx.fillStyle='#ffd778';ctx.font='bold 9px "Malgun Gothic", system-ui, sans-serif';ctx.fillText(`SALE ${this.merchantActiveVisit.sale.label}`,Math.round(this.merchant.x-42),Math.round(this.merchant.y-32));}}
+      for(const v of this.customer.visitors){this.renderVisitorStatus(ctx,v);if(v.hitStarT>0)this.renderHitStars(ctx,v);}
       if(this.broomEquipped&&this.playerFloors[this.controlled]==='shop')this.renderHeldBroom(ctx);
     }else{
       renderLoft(ctx,this.t,this.time.minute);for(const id of ['older','younger'])if(this.playerFloors[id]==='loft')drawCharacter(ctx,id,this.players[id].x,this.players[id].y,this.players[id].walkT,this.controlled===id);
@@ -443,22 +478,22 @@ export class GameScene {
     renderLighting(ctx,this.time.minute,this.floor,this.t);this.renderPrompts(ctx);this.ui.render(ctx,this);
   }
   renderWorkerStatus(ctx,id){
-    if(this.controlled===id)return;const st=this.brotherWork.status(id);if(st.state==='IDLE')return;const p=this.players[id];ctx.fillStyle='#1b120de5';ctx.fillRect(p.x-30,p.y-52,60,12);ctx.fillStyle='#f1d28b';ctx.font='7px monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(`${st.icon} ${st.label}`,p.x,p.y-46);ctx.textAlign='left';
+    if(this.controlled===id)return;const st=this.brotherWork.status(id);if(st.state==='IDLE')return;const p=this.players[id];ctx.fillStyle='#1b120de5';ctx.fillRect(p.x-30,p.y-52,60,12);ctx.fillStyle='#f1d28b';ctx.font='8px "Malgun Gothic", system-ui, sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(`${st.icon} ${st.label}`,p.x,p.y-46);ctx.textAlign='left';
   }
   renderHeldBroom(ctx){
     const p=this.controlledPlayer(),swing=this.cutscene?.kind==='broomRude'?Math.max(0,1-this.cutscene.timer/1.12):0;ctx.save();ctx.translate(Math.round(p.x),Math.round(p.y));ctx.rotate(-.55+swing*1.25);ctx.fillStyle='#9c7448';ctx.fillRect(12,-27,3,37);ctx.fillStyle='#b49154';for(let i=0;i<4;i++)ctx.fillRect(7+i*5,7,4,12);ctx.restore();
   }
-  renderHitStars(ctx,v){ctx.fillStyle='#f6d257';ctx.font='bold 12px monospace';ctx.textAlign='center';ctx.fillText('✦  ✦',v.x,v.y-54);ctx.textAlign='left';}
-  renderVisitorStatus(ctx,v){if(v.status==='leaving'&&!v.bubble)return;let text=v.bubble;if(!text){if(v.status==='waiting')text=v.mode==='commission'?'주문 상담':'!';else if(v.status==='ordered')text=`${ITEMS[v.acceptedItem]?.name||'주문'} 기다림`;else if(v.status==='browsing')text='구경 중';}if(!text)return;ctx.font='7px monospace';const w=Math.min(90,ctx.measureText(text).width+10);ctx.fillStyle='#f4e3c9';ctx.fillRect(v.x-w/2,v.y-48,w,14);ctx.fillStyle='#3a291e';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,v.x,v.y-41);ctx.textAlign='left';}
+  renderHitStars(ctx,v){ctx.fillStyle='#f6d257';ctx.font='bold 12px "Malgun Gothic", system-ui, sans-serif';ctx.textAlign='center';ctx.fillText('✦  ✦',v.x,v.y-54);ctx.textAlign='left';}
+  renderVisitorStatus(ctx,v){if(v.status==='leaving'&&!v.bubble)return;let text=v.bubble;if(!text){if(v.status==='waiting')text=v.mode==='commission'?'주문 상담':v.isRegular?'★ 단골':'!';else if(v.status==='ordered')text=`${v.isRegular?'★ ':''}${ITEMS[v.acceptedItem]?.name||'주문'} 기다림`;else if(v.status==='browsing')text=v.isRegular?'★ 단골 · 구경':'구경 중';else if(v.special)text='✦ 특별 손님';}if(!text)return;ctx.font='8px "Malgun Gothic", system-ui, sans-serif';const w=Math.min(102,ctx.measureText(text).width+10);ctx.fillStyle=v.special?'#f3dfad':'#f4e3c9';ctx.fillRect(Math.round(v.x-w/2),Math.round(v.y-48),Math.round(w),14);ctx.fillStyle='#3a291e';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,Math.round(v.x),Math.round(v.y-41));ctx.textAlign='left';}
   renderPrompts(ctx){
     if(this.ui.modal||this.ui.craft||this.ui.shop||this.ui.isPauseOpen())return;const p=this.controlledPlayer();let prompt='';
     if(this.floor==='loft'){
       const near=Object.entries(LOFT_STATIONS).map(([id,s])=>({id,s,d:this.dist(s.x+s.w/2,s.y+s.h/2)})).sort((a,b)=>a.d-b.d)[0];if(near?.d<62)prompt=`E ${near.s.label}`;
     }else{
       if(this.broomEquipped){const rude=this.nearestRude(),dirt=this.nearestDirt();if(rude&&rude.d<68)prompt='E 빗자루로 진상 쫓아내기';else if(dirt&&dirt.d<34)prompt='E 빗자루 청소';}
-      if(!prompt){const waiting=this.customer.nearestWaiting(p.x,p.y);if(waiting&&Math.hypot(p.x-waiting.x,p.y-waiting.y)<58)prompt=waiting.status==='ordered'?'E 주문품 판매':'E 손님 응대';else if(this.child.visible&&this.dist(this.child.x,this.child.y)<46)prompt='E 꼬마와 대화';else if(this.merchantVisible&&this.dist(this.merchant.x,this.merchant.y)<50)prompt='E 재료 구매';else{const other=this.nearestOtherBrother();if(other.d<38)prompt=`E ${BROTHERS[other.id].name}에게 업무 맡기기`;else{const near=Object.entries(STATIONS).map(([id,s])=>({id,s,d:this.dist(s.x+s.w/2,s.y+s.h/2)})).sort((a,b)=>a.d-b.d)[0];if(near?.d<60)prompt=`E ${near.s.label}`;}}}
+      if(!prompt){const waiting=this.customer.nearestWaiting(p.x,p.y);if(waiting&&Math.hypot(p.x-waiting.x,p.y-waiting.y)<58)prompt=waiting.status==='ordered'?'E 주문품 판매':'E 손님 응대';else if(this.child.visible&&this.dist(this.child.x,this.child.y)<46)prompt='E 꼬마와 대화';else if(this.merchantVisible&&this.dist(this.merchant.x,this.merchant.y)<50)prompt='E 재료 구매';else{const other=this.nearestOtherBrother();if(other.d<38)prompt=`E ${BROTHERS[other.id].name}에게 업무 맡기기`;else{const near=Object.entries(STATIONS).map(([id,st])=>{const ip=INTERACTION_POINTS[id]||{x:st.x+st.w/2,y:st.y+st.h/2};return{id,s:st,d:this.dist(ip.x,ip.y)};}).sort((a,b)=>a.d-b.d)[0];if(near?.d<60)prompt=`E ${near.s.label}`;}}}
     }
-    if(prompt){ctx.fillStyle='#17100de0';ctx.fillRect(197,327,246,21);ctx.fillStyle='#f3d9a5';ctx.font='9px monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(prompt,320,338);ctx.textAlign='left';}
+    if(prompt){ctx.fillStyle='#17100de0';ctx.fillRect(197,327,246,21);ctx.fillStyle='#f3d9a5';ctx.font='10px "Malgun Gothic", system-ui, sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(prompt,320,338);ctx.textAlign='left';}
   }
 
 }

@@ -117,7 +117,7 @@ export const STATIONS = {
   grind:   { x:92,  y:196, w:62, h:50, label:'숫돌', class:OBJECT_CLASS.FLOOR_FIXED, showLabel:true },
   bench:   { x:182, y:206, w:124, h:52, label:'큰 작업대', class:OBJECT_CLASS.FLOOR_FIXED, showLabel:true },
   storage: { x:54,  y:280, w:92, h:44, label:'재료 창고', class:OBJECT_CLASS.FLOOR_FIXED, showLabel:false },
-  broom:   { x:286, y:286, w:28, h:40, label:'빗자루', class:OBJECT_CLASS.FLOOR_SMALL, showLabel:true },
+  broom:   { x:398, y:286, w:28, h:40, label:'빗자루', class:OBJECT_CLASS.FLOOR_SMALL, showLabel:true },
 
   // Sales area
   display: { x:510, y:102, w:92, h:60, label:'판매 진열대', class:OBJECT_CLASS.FLOOR_FIXED, showLabel:true },
@@ -145,7 +145,7 @@ export const SHOP_COLLIDERS=[
   {id:'storage',x:54,y:300,w:92,h:24},
   {id:'display',x:510,y:144,w:92,h:18},
   {id:'counterTop',x:432,y:266,w:132,h:20},
-  {id:'counterLeg',x:534,y:286,w:30,h:38},
+  {id:'counterLeg',x:524,y:286,w:40,h:38},
 ];
 
 export const INTERACTIONS={
@@ -159,7 +159,7 @@ export const INTERACTIONS={
   storage:{x:160,y:308,radius:34,priority:4},
   display:{x:556,y:176,radius:34,priority:5},
   counter:{x:498,y:304,radius:36,priority:6},
-  broom:{x:300,y:314,radius:20,priority:3},
+  broom:{x:412,y:314,radius:20,priority:3},
   sign:{x:572,y:300,radius:24,priority:6},
   door:{x:593,y:304,radius:22,priority:2},
 };
@@ -192,7 +192,7 @@ export const SHOP_LABELS={
   grind:{x:108,y:250},
   bench:{x:205,y:263},
   display:{x:522,y:179},
-  broom:{x:287,y:263},
+  broom:{x:392,y:263},
 };
 
 export const LOFT_STATIONS = {

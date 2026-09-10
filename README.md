@@ -1,4 +1,4 @@
-# 형제의 대장간 V0.2.5c
+# 형제의 대장간 V0.2.5e
 
 V0.2.5a를 기준으로 한 **공간 문법·충돌·레이어·동선 긴급 핫픽스**입니다.
 이번 버전은 콘텐츠를 늘리는 대신 1층/2층을 실제로 걸어 다닐 수 있고, 오브젝트의 앞뒤가 자연스럽고, 상호작용이 서로 빼앗지 않는 공간으로 다시 정리했습니다.
@@ -53,7 +53,7 @@ Render Static Site 기준:
 - 결정: Enter / Space
 - 상인: ↑↓ 품목, ←→ 수량, Shift+←→ 빠른 수량 변경, Enter 구매
 
-## V0.2.5c 공간 문법 변경
+## V0.2.5e 공간 문법 변경
 
 ### 1층 오브젝트 분류
 `GameData.js`에 `OBJECT_CLASS`를 두고 오브젝트를 벽/바닥 고정/탁상/바닥 소품 문법으로 나눴습니다.
@@ -167,10 +167,10 @@ V0.2.4 saveVersion 3 → V4 migration도 유지합니다.
 
 `qa/`에 실제 게임 렌더 함수를 사용한 시각 QA 이미지가 포함되어 있습니다.
 
-- `V0.2.5c_scene_shop.png`: HUD/작업 안내/기사 경고 마커/카운터 포함 1층 Scene
-- `V0.2.5c_scene_loft.png`: 실제 2층 Scene
-- `V0.2.5c_shop_spatial.png`: 1층 공간 레이어 확인
-- `V0.2.5c_loft_spatial.png`: 2층 공간 레이어 확인
+- `V0.2.5e_scene_shop.png`: HUD/작업 안내/기사 경고 마커/카운터 포함 1층 Scene
+- `V0.2.5e_scene_loft.png`: 실제 2층 Scene
+- `V0.2.5e_shop_spatial.png`: 1층 공간 레이어 확인
+- `V0.2.5e_loft_spatial.png`: 2층 공간 레이어 확인
 
 ## 검증
 
@@ -186,4 +186,4 @@ V0.2.4 saveVersion 3 → V4 migration도 유지합니다.
 - 실제 Canvas Scene 렌더 QA
 - 최종 ZIP 무결성 검사
 
-자세한 변경은 `V0.2.5c_PATCH_NOTES.md`, 검증 결과는 `V0.2.5c_TEST_REPORT.md`를 참고하세요.
+자세한 변경은 `V0.2.5e_PATCH_NOTES.md`, 검증 결과는 `V0.2.5e_TEST_REPORT.md`를 참고하세요.

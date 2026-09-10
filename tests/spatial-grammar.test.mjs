@@ -57,4 +57,4 @@ for(const id of ['sign','door','storage','counter'])assert.equal(SHOP_LABELS[id]
 let boxes=0,bang=false;const markerCtx={save(){},restore(){},fillRect(x,y,w,h){if(w>=12&&h>=12)boxes++;},fillText(t){if(t==='!')bang=true;},set fillStyle(v){},set font(v){},set textAlign(v){},set textBaseline(v){}};
 scene.renderAlertMarker(markerCtx,{x:300,y:220});assert.ok(boxes>=2&&bang,'alert marker should render a visible pixel plate plus !');
 
-console.log('✓ V0.2.5c spatial grammar/depth/interaction tests passed');
+console.log('✓ V0.2.5e spatial grammar/depth/interaction tests passed');

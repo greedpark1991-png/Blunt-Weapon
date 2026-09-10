@@ -86,10 +86,10 @@ function drawToolWall(ctx){
   const y=57;pxRect(ctx,86,y-4,144,4,'#3d2a1c');for(let i=0;i<6;i++){pxRect(ctx,100+i*21,y,3,19+(i%2)*4,'#4b3423');pxRect(ctx,95+i*21,y+2,13,4,'#77756f');}
   pxRect(ctx,374,61,105,5,'#3d2a1c');for(let i=0;i<7;i++)pxRect(ctx,382+i*13,67,5,8+(i%3)*5,i%2?'#7b6752':'#555a58');
 }
-function drawCounterTop(ctx,s){pxRect(ctx,s.x,s.y+8,s.w,s.h-8,'#3c281b');pxRect(ctx,s.x-4,s.y,s.w+8,12,'#7d5838');pxRect(ctx,s.x+8,s.y+15,s.w-16,13,'#593a24');
+function drawCounterTop(ctx,s){pxRect(ctx,s.x,s.y+10,s.w,s.h-10,'#3c281b');pxRect(ctx,s.x-5,s.y,s.w+10,12,'#7d5838');pxRect(ctx,s.x+6,s.y+16,s.w-22,12,'#593a24');pxRect(ctx,s.x+s.w-44,s.y+14,18,10,'#6a4328');
   // Ledger / coins / wrapping cloth are all on the top plane, never floating in base render.
   pxRect(ctx,s.x+20,s.y+3,20,6,'#d0b57e');pxRect(ctx,s.x+49,s.y+3,14,7,'#6d3c2a');pxRect(ctx,s.x+77,s.y+4,18,5,'#a17a43');pxRect(ctx,s.x+101,s.y+5,11,4,'#c59c52');}
-function drawCounterLeg(ctx,s){const lx=s.x+s.w-30;pxRect(ctx,lx,s.y+28,30,44,'#3c281b');pxRect(ctx,lx-4,s.y+27,38,10,'#7d5838');pxRect(ctx,lx+7,s.y+39,16,27,'#593a24');}
+function drawCounterLeg(ctx,s){const lx=s.x+s.w-40;pxRect(ctx,lx,s.y+20,40,52,'#3c281b');pxRect(ctx,lx-5,s.y+18,45,11,'#7d5838');pxRect(ctx,lx+5,s.y+30,28,34,'#593a24');pxRect(ctx,lx+9,s.y+25,20,4,'#8e6640');}
 function drawBed(ctx,s,blanket='#6d4a62'){
   if(s.orientation==='vertical'){
     pxRect(ctx,s.x,s.y,s.w,s.h,'#4b2f20');pxRect(ctx,s.x+5,s.y+5,s.w-10,s.h-10,'#8d5d4b');pxRect(ctx,s.x+8,s.y+8,s.w-16,22,'#d3c29f');pxRect(ctx,s.x+9,s.y+32,s.w-18,s.h-42,blanket);pxRect(ctx,s.x+3,s.y+s.h-8,s.w-6,6,'#3f291c');
@@ -105,7 +105,7 @@ function drawStairs(ctx,s,dir='up'){if(dir==='up'){
   pxRect(ctx,s.x+s.w-12,s.y+4,6,18,'#725033');pxRect(ctx,s.x+s.w-14,s.y+3,12,4,'#a77a4a');
 }else{pxRect(ctx,s.x,s.y+4,s.w,s.h-4,'#3c2a1e');pxRect(ctx,s.x+4,s.y+4,s.w-8,12,'#211914');for(let i=0;i<5;i++){const w=s.w-10-i*10,x=s.x+i*5,y=s.y+s.h-8-i*8;pxRect(ctx,x,y,w,6,'#84603e');}pxRect(ctx,s.x+4,s.y,s.w-8,4,'#2e2018');}}
 function drawBroom(ctx,s){pxRect(ctx,s.x+13,s.y,3,29,'#9c7448');for(let i=0;i<4;i++)pxRect(ctx,s.x+5+i*5,s.y+26,4,13,'#b49154');}
-function drawSign(ctx,s,open){pxRect(ctx,s.x+8,s.y,2,8,'#6d4a2c');pxRect(ctx,s.x+1,s.y+7,16,11,'#3c291b');pxRect(ctx,s.x+3,s.y+9,12,7,open?'#49633e':'#704437');ctx.fillStyle='#f0d7a9';ctx.font='4px "Malgun Gothic", system-ui, sans-serif';ctx.textAlign='center';ctx.fillText(open?'OPEN':'CLOSE',s.x+9,s.y+14);ctx.textAlign='left';}
+function drawSign(ctx,s,open){pxRect(ctx,s.x+8,s.y,2,8,'#6d4a2c');pxRect(ctx,s.x+1,s.y+7,16,11,open?'#22422a':'#4a241f');pxRect(ctx,s.x+3,s.y+9,12,7,open?'#2f8a45':'#b03a32');ctx.fillStyle='#ffffff';ctx.font='4px "Malgun Gothic", system-ui, sans-serif';ctx.textAlign='center';ctx.fillText(open?'OPEN':'CLOSE',s.x+9,s.y+14);ctx.textAlign='left';}
 function drawDoor(ctx,s){pxRect(ctx,s.x-3,s.y-22,s.w+6,s.h+22,'#2a1b13');pxRect(ctx,s.x+2,s.y-17,s.w-4,s.h+17,'#72472a');pxRect(ctx,s.x+6,s.y-12,s.w-12,s.h+10,'#55351f');pxRect(ctx,s.x+s.w-12,s.y+4,3,3,'#d3aa59');pxRect(ctx,s.x-5,s.y-24,s.w+10,5,'#47301f');}
 
 export function renderLighting(ctx,minute,floor='shop',t=0){const m=((minute%1440)+1440)%1440;let alpha=0,color='20,26,38';if(m<420){alpha=.09;color='28,39,62';}else if(m<540){alpha=.035;color='235,196,145';}else if(m<1020){alpha=0;}else if(m<1140){alpha=.035;color='220,117,69';}else if(m<1260){alpha=.055;color='94,68,92';}else{alpha=.075;color='24,30,48';}if(alpha){ctx.fillStyle=`rgba(${color},${alpha})`;ctx.fillRect(0,30,640,330);}if(m>=1140||m<420){const flick=.85+.15*Math.sin(t*9);const glows=floor==='shop'?[[165,150,82,'236,120,45'],[250,170,36,'239,177,83'],[594,286,32,'229,166,82']]:[[405,108,58,'242,176,75'],[320,190,34,'229,166,82']];ctx.save();ctx.globalCompositeOperation='screen';for(const [x,y,r,c] of glows){const g=ctx.createRadialGradient(x,y,2,x,y,r);g.addColorStop(0,`rgba(${c},${.17*flick})`);g.addColorStop(1,`rgba(${c},0)`);ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();}ctx.restore();}}

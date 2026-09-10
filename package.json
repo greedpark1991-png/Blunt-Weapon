@@ -1,9 +1,9 @@
 {
-  "name": "blacksmith-brothers-v0.2.5c",
-  "version": "0.2.5-c",
+  "name": "blacksmith-brothers-v0.2.5e",
+  "version": "0.2.5-e",
   "private": true,
   "type": "module",
-  "description": "중세 판타지 형제 대장장이 V0.2.5c - 사용자 배치 피드백 반영 공간 레이아웃 조정 핫픽스",
+  "description": "중세 판타지 형제 대장장이 V0.2.5e - 사용자 배치 피드백 반영 공간 레이아웃 조정 핫픽스",
   "scripts": {
     "dev": "node scripts/dev-server.mjs",
     "build": "node scripts/build.mjs",

@@ -37,7 +37,7 @@ export class GameScene {
   }
   init(){
     if(this.showTutorial){
-      this.showTracker(true);this.ui.openModal('V0.2.5c · 사용자 배치 반영 핫픽스','오브젝트의 벽/바닥 분류, 발 위치 depth, 충돌 footprint와 상호작용 지점을 다시 분리하고 1층/2층 통로를 우선해 재배치했다.',[{label:'아침 시작'}],()=>{this.showTutorial=false;this.save(true);this.showMorningNews();});
+      this.showTracker(true);this.ui.openModal('V0.2.5e · 영업표지판 개폐 색상 보정','오브젝트의 벽/바닥 분류, 발 위치 depth, 충돌 footprint와 상호작용 지점을 다시 분리하고 1층/2층 통로를 우선해 재배치했다.',[{label:'아침 시작'}],()=>{this.showTutorial=false;this.save(true);this.showMorningNews();});
     }else if(!this.morningShown)this.showMorningNews();
   }
   stateForData(){return{knightPurchase:this.knightPurchase,activeEvent:this.events.activeEvent,customerHistory:this.customerHistory,customerProfiles:this.customerProfiles,debts:this.debts,recentRudeTypes:this.recentRudeTypes,rudeEver:this.flags.rudeEver,reputation:this.economy?.reputation??0};}

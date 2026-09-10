@@ -60,4 +60,4 @@ assert.equal(objective.target,'forge');assert.match(objective.current,/가열/);
 while(s.crafting.active?.stageIndex===0)s.finishCraftStage(85,{perfectHits:0,stagePerfect:false});
 objective=s.currentObjective();assert.equal(objective.target,'anvil');assert.match(objective.current,/성형/);
 
-console.log('✓ V0.2.5c layout/stair/merchant/tracker tests passed');
+console.log('✓ V0.2.5e layout/stair/merchant/tracker tests passed');

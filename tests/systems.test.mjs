@@ -68,4 +68,4 @@ for(const v of cs.visitors)assert.ok(world.isWalkable(v.x,v.y,'CUSTOMER_ZONE',6)
 
 assert.equal(RenownSystem.tier(0).name,'무명의 대장간');assert.equal(RenownSystem.tier(10).name,'동네에서 소문난 대장간');assert.equal(RenownSystem.tier(25).name,'마을의 유명 대장간');assert.equal(RenownSystem.tier(120).name,'이름난 형제 대장장이');assert.ok(RenownSystem.specialPool(80).length>=3);
 
-console.log('✓ V0.2.5c systems/collision/pathfinding tests passed');
+console.log('✓ V0.2.5e systems/collision/pathfinding tests passed');

@@ -44,4 +44,4 @@ class AudioMock{constructor(src){this.src=src;this.loop=false;this.preload='';th
 AudioMock.instances=[];globalThis.Audio=AudioMock;globalThis.window={AudioContext:null,webkitAudioContext:null};
 const snd=new SoundFX();snd.setBGMVolume(.42);snd.setSFXVolume(.77);snd.startBGM();snd.startBGM();assert.equal(AudioMock.instances.length,1);assert.equal(snd.bgm.loop,true);assert.ok(snd.bgm.src.includes('the_artisans_hearth.mp3'));assert.equal(snd.bgmVolume,.42);assert.equal(snd.sfxVolume,.77);const snd2=new SoundFX();assert.equal(snd2.bgmVolume,.42);assert.equal(snd2.sfxVolume,.77);
 
-console.log('✓ V0.2.5c UX/save/keyboard/audio tests passed');
+console.log('✓ V0.2.5e UX/save/keyboard/audio tests passed');

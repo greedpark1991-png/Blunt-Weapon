@@ -1,5 +1,5 @@
 const ZONES={
-  // V0.2.5b: dirt appears on reachable floor near the activity that caused it.
+  // V0.2.5f: dirt appears on reachable floor near the activity that caused it.
   FORGE_DIRT_ZONE:{x:132,y:184,w:78,h:32,types:['재','검댕','석탄 부스러기']},
   ANVIL_DIRT_ZONE:{x:218,y:180,w:72,h:36,types:['철가루','금속 조각']},
   WATER_DIRT_ZONE:{x:282,y:180,w:64,h:34,types:['물자국','철 부스러기']},

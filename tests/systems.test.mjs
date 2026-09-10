@@ -57,7 +57,7 @@ const workers={older:new Player('older',308,300),younger:new Player('younger',35
 for(const [worker,itemId] of [['older','shield'],['younger','sword']]){
   assert.equal(work.assignCraft(worker,itemId,autoInv).ok,true);let delivered=null;
   for(let i=0;i<5000&&!delivered;i++){const out=work.update(1/60,workers,world);delivered=out.find(x=>x.type==='craftDelivered')||null;}
-  assert.ok(delivered?.item,`${worker} should complete ${itemId}`);assert.equal(work.busy(worker),false);
+  assert.ok(delivered?.item,`${worker} should complete ${itemId}`);for(let i=0;i<1200&&work.busy(worker);i++)work.update(1/60,workers,world);assert.equal(work.busy(worker),false,`${worker} should leave storage and return to parking`);
 }
 work.assignRole('younger','counter');for(let i=0;i<1000&&work.task('younger')?.state!=='WORKING';i++)work.update(1/60,workers,world);assert.equal(work.task('younger').state,'WORKING');
 
@@ -68,4 +68,4 @@ for(const v of cs.visitors)assert.ok(world.isWalkable(v.x,v.y,'CUSTOMER_ZONE',6)
 
 assert.equal(RenownSystem.tier(0).name,'무명의 대장간');assert.equal(RenownSystem.tier(10).name,'동네에서 소문난 대장간');assert.equal(RenownSystem.tier(25).name,'마을의 유명 대장간');assert.equal(RenownSystem.tier(120).name,'이름난 형제 대장장이');assert.ok(RenownSystem.specialPool(80).length>=3);
 
-console.log('✓ V0.2.5e systems/collision/pathfinding tests passed');
+console.log('✓ V0.2.5f systems/collision/pathfinding tests passed');

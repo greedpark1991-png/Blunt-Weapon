@@ -5,5 +5,5 @@ await rm(dist,{recursive:true,force:true});await mkdir(dist,{recursive:true});
 await cp(resolve(root,'src'),resolve(dist,'src'),{recursive:true});
 await cp(resolve(root,'index.html'),resolve(dist,'index.html'));
 try{await access(resolve(root,'assets'));await cp(resolve(root,'assets'),resolve(dist,'assets'),{recursive:true});}catch{}
-await writeFile(resolve(dist,'BUILD_INFO.txt'),`Blacksmith Brothers V0.2.5b\nBuilt: ${new Date().toISOString()}\nStatic hosting ready.\nIncludes supplied The Artisan's Hearth BGM.\n`);
+await writeFile(resolve(dist,'BUILD_INFO.txt'),`Blacksmith Brothers V0.2.5f.1\nBuilt: ${new Date().toISOString()}\nStatic hosting ready.\nIncludes supplied Midday at the Pier BGM. Default mix: BGM 6%, SFX 20%.\n`);
 console.log('✓ Production build created at dist/');

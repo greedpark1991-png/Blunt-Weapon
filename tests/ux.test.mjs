@@ -10,13 +10,13 @@ import { chooseTrait } from '../src/data/GameData.js';
 class LocalStorageMock{constructor(){this.m=new Map();}getItem(k){return this.m.has(k)?this.m.get(k):null;}setItem(k,v){this.m.set(k,String(v));}removeItem(k){this.m.delete(k);}clear(){this.m.clear();}}
 globalThis.localStorage=new LocalStorageMock();
 
-// V0.2.4 saveVersion 3 migrates safely into V0.2.5 saveVersion 4.
+// V0.2.4 saveVersion 3 migrates safely into V0.2.5 saveVersion 5.
 const old={saveVersion:3,version:3,day:4,calendar:{year:1,month:1,day:4,weekday:3},time:{minute:822,speed:1},gold:456,reputation:27,playTimeSeconds:10,maintenance:{cleanliness:70,dirtSpots:[{x:350,y:300}]}};
 localStorage.setItem(SaveSystem.key(1),JSON.stringify({saveVersion:3,meta:{date:'old'},data:old}));
-const migrated=SaveSystem.load(1);assert.equal(migrated.saveVersion,4);assert.equal(migrated.gold,456);assert.deepEqual(migrated.customerProfiles,{});assert.deepEqual(migrated.kidFlags,{});assert.ok(Array.isArray(migrated.maintenance.dirtSpots));
+const migrated=SaveSystem.load(1);assert.equal(migrated.saveVersion,5);assert.equal(migrated.gold,456);assert.equal(migrated.display.slots.length,6);assert.deepEqual(migrated.doorReservation,{holder:null,direction:null,queue:[]});assert.deepEqual(migrated.customerProfiles,{});assert.deepEqual(migrated.kidFlags,{});assert.ok(Array.isArray(migrated.maintenance.dirtSpots));
 
 // Six manual slots stay independent from auto save.
-const base={saveVersion:4,day:1,calendar:{year:1,month:1,day:1,weekday:0},time:{minute:360,speed:1},gold:100,reputation:0,playTimeSeconds:10};
+const base={saveVersion:5,day:1,calendar:{year:1,month:1,day:1,weekday:0},time:{minute:360,speed:1},gold:100,reputation:0,playTimeSeconds:10};
 assert.equal(SaveSystem.saveSlot(1,{...base,gold:111}),true);assert.equal(SaveSystem.saveSlot(2,{...base,gold:222,calendar:{year:1,month:1,day:2,weekday:1}}),true);assert.equal(SaveSystem.saveAuto({...base,gold:333}),true);
 assert.equal(SaveSystem.load(1).gold,111);assert.equal(SaveSystem.load(2).gold,222);assert.equal(SaveSystem.load('auto').gold,333);assert.equal(SaveSystem.list().length,7);
 SaveSystem.delete(2);assert.equal(SaveSystem.load(2),null);assert.equal(SaveSystem.load(1).gold,111);
@@ -42,6 +42,6 @@ ui.beginCraft({id:'x',kind:'heat',difficulty:1,hits:1,station:'forge',label:'tes
 // Global audio settings are independent and persist; BGM remains singleton/looped.
 class AudioMock{constructor(src){this.src=src;this.loop=false;this.preload='';this.volume=1;this.paused=true;this.currentTime=0;this.listeners={};AudioMock.instances.push(this);}addEventListener(t,fn){this.listeners[t]=fn;}play(){this.paused=false;return Promise.resolve();}pause(){this.paused=true;}}
 AudioMock.instances=[];globalThis.Audio=AudioMock;globalThis.window={AudioContext:null,webkitAudioContext:null};
-const snd=new SoundFX();snd.setBGMVolume(.42);snd.setSFXVolume(.77);snd.startBGM();snd.startBGM();assert.equal(AudioMock.instances.length,1);assert.equal(snd.bgm.loop,true);assert.ok(snd.bgm.src.includes('the_artisans_hearth.mp3'));assert.equal(snd.bgmVolume,.42);assert.equal(snd.sfxVolume,.77);const snd2=new SoundFX();assert.equal(snd2.bgmVolume,.42);assert.equal(snd2.sfxVolume,.77);
+localStorage.removeItem('blacksmith-brothers-globalSettings-v1');const sndDefault=new SoundFX();assert.equal(sndDefault.bgmVolume,.06);assert.equal(sndDefault.sfxVolume,.20);localStorage.setItem('blacksmith-brothers-globalSettings-v1',JSON.stringify({bgmVolume:.65,sfxVolume:.80,bgmMuted:false,sfxMuted:false}));const sndLegacy=new SoundFX();assert.equal(sndLegacy.bgmVolume,.06);assert.equal(sndLegacy.sfxVolume,.20);const snd=new SoundFX();snd.setBGMVolume(.42);snd.setSFXVolume(.77);snd.startBGM();snd.startBGM();assert.equal(AudioMock.instances.length,1);assert.equal(snd.bgm.loop,true);assert.ok(snd.bgm.src.includes('midday_at_the_pier.mp3'));assert.equal(snd.bgmVolume,.42);assert.equal(snd.sfxVolume,.77);const snd2=new SoundFX();assert.equal(snd2.bgmVolume,.42);assert.equal(snd2.sfxVolume,.77);
 
-console.log('✓ V0.2.5e UX/save/keyboard/audio tests passed');
+console.log('✓ V0.2.5f.1 UX/save/keyboard/audio tests passed');

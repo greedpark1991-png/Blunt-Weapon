@@ -88,7 +88,7 @@ export const MATERIAL_NAMES = { iron:'철', wood:'목재', leather:'가죽' };
 export const FUEL_TYPES={wood:{id:'wood',name:'장작'},coal:{id:'coal',name:'석탄'}};
 
 // ---------------------------------------------------------------------------
-// V0.2.5b spatial grammar
+// V0.2.5f spatial grammar
 // A wall-attached prop never participates in floor routing.
 // A floor-fixed object has a visual sprite, a smaller floor footprint, a baseY,
 // and a separate interaction point.  This keeps collision, depth and use range
@@ -144,8 +144,8 @@ export const SHOP_COLLIDERS=[
   {id:'bench',x:182,y:232,w:124,h:26},
   {id:'storage',x:54,y:300,w:92,h:24},
   {id:'display',x:510,y:144,w:92,h:18},
-  {id:'counterTop',x:432,y:266,w:132,h:20},
-  {id:'counterLeg',x:524,y:286,w:40,h:38},
+  {id:'counterTop',x:432,y:266,w:132,h:20,counterId:'counter_main',interactionGroup:'counter_main'},
+  {id:'counterLeg',x:524,y:286,w:40,h:38,counterId:'counter_main',interactionGroup:'counter_main'},
 ];
 
 export const INTERACTIONS={
@@ -164,6 +164,49 @@ export const INTERACTIONS={
   door:{x:593,y:304,radius:22,priority:2},
 };
 export const INTERACTION_POINTS=Object.fromEntries(Object.entries(INTERACTIONS).map(([id,p])=>[id,{x:p.x,y:p.y}]));
+
+export const PLAYER_INTERACTION_POINTS=INTERACTION_POINTS;
+export const STORAGE_INTERACTION_POINTS=[
+  {id:'front',x:100,y:282},
+  {id:'left',x:42,y:310},
+  {id:'right',x:160,y:310},
+];
+export const ASSIST_POINTS={
+  fuel:{x:118,y:184},
+  forge:{x:214,y:184},
+  anvil:{x:276,y:184},
+  water:{x:344,y:184},
+  grind:{x:166,y:210},
+  bench:{x:320,y:250},
+  counter:{x:412,y:304},
+  broom:{x:420,y:278},
+};
+export const STORAGE_DELIVERY_POINT={x:100,y:282};
+export const SHOP_IDLE_POINTS={
+  older:{x:336,y:300},
+  younger:{x:372,y:300},
+};
+export const NPC_PARKING_POINTS={
+  older:{x:336,y:300},
+  younger:{x:372,y:300},
+  storageOlder:{x:336,y:300},
+  storageYounger:{x:372,y:300},
+};
+export const NO_IDLE_ZONES=Object.entries(INTERACTIONS)
+  .filter(([id])=>!['door','sign'].includes(id))
+  .map(([id,p])=>({id:`no_idle_${id}`,x:p.x-24,y:p.y-24,w:48,h:48}));
+export const DOOR_FLOW={
+  outsideWait:{x:590,y:350},
+  outsideWaitStep:{x:14,y:0},
+  entry:{x:590,y:320},
+  inside:{x:580,y:296},
+  exitWait:{x:580,y:296},
+  exitDoor:{x:594,y:320},
+  outsideExit:{x:612,y:350},
+};
+export const COUNTER_GROUP={
+  id:'counter_main',interactionGroup:'counter_main',stationId:'counter',parts:['counterTop','counterLeg'],
+};
 
 // Explicit baseY values are the bottom of the floor footprint, never sprite
 // center.  The L-shaped counter is drawn in two depth-sorted pieces.
@@ -208,8 +251,8 @@ export const LOFT_STATIONS = {
 // Named props are kept out of STATIONS because they are decoration, but their
 // floor footprints still matter for believable room circulation.
 export const LOFT_PROPS={
-  olderChest:{x:138,y:100,w:44,h:28,label:'형의 낡은 궤짝'},
-  youngerChest:{x:448,y:102,w:46,h:28,label:'동생의 상자'},
+  olderChest:{x:132,y:170,w:52,h:38,label:'형의 낡은 궤짝'},
+  youngerChest:{x:450,y:170,w:52,h:38,label:'동생의 상자'},
   rug:{x:232,y:244,w:166,h:52},
 };
 
@@ -219,13 +262,13 @@ export const LOFT_COLLIDERS=[
   {id:'olderBed',x:58,y:174,w:56,h:60},
   {id:'youngerBed',x:522,y:174,w:56,h:60},
   {id:'table',x:278,y:188,w:84,h:26},
-  {id:'olderChest',x:138,y:118,w:44,h:12},
-  {id:'youngerChest',x:448,y:120,w:46,h:12},
+  {id:'olderChest',x:132,y:190,w:52,h:18},
+  {id:'youngerChest',x:450,y:190,w:52,h:18},
   {id:'stairsDown',x:542,y:290,w:56,h:34},
 ];
 export const LOFT_INTERACTIONS={
-  olderBed:{x:126,y:210,radius:34,priority:6},
-  youngerBed:{x:514,y:210,radius:34,priority:6},
+  olderBed:{x:122,y:244,radius:34,priority:6},
+  youngerBed:{x:514,y:244,radius:34,priority:6},
   table:{x:320,y:226,radius:32,priority:3},
   wardrobe:{x:132,y:156,radius:30,priority:2},
   window:{x:320,y:158,radius:26,priority:1},
@@ -234,8 +277,8 @@ export const LOFT_INTERACTIONS={
 };
 export const LOFT_INTERACTION_POINTS=Object.fromEntries(Object.entries(LOFT_INTERACTIONS).map(([id,p])=>[id,{x:p.x,y:p.y}]));
 export const LOFT_DEPTHS={
-  olderChest:130,
-  youngerChest:132,
+  olderChest:208,
+  youngerChest:208,
   table:214,
   olderBed:234,
   youngerBed:234,

@@ -1,4 +1,4 @@
-Blacksmith Brothers V0.2.5b
-Built: 2026-09-10T03:37:42.508Z
+Blacksmith Brothers V0.2.5f.1
+Built: 2026-09-10T05:13:05.002Z
 Static hosting ready.
-Includes supplied The Artisan's Hearth BGM.
+Includes supplied Midday at the Pier BGM. Default mix: BGM 6%, SFX 20%.

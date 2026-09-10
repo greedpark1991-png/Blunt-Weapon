@@ -3,16 +3,19 @@ const AUTO='blacksmith-brothers-v3-auto';
 const OLD_KEYS=['blacksmith-brothers-v02-save','blacksmith-brothers-v01-save'];
 export class SaveSystem{
   static SLOT_COUNT=6;
-  static CURRENT_VERSION=4;
+  static CURRENT_VERSION=5;
   static key(id){return id==='auto'?AUTO:`${PREFIX}${Number(id)}`;}
   static hasSave(){return this.hasAnySave();}
   static hasAnySave(){try{if(localStorage.getItem(AUTO))return true;for(let i=1;i<=this.SLOT_COUNT;i++)if(localStorage.getItem(this.key(i)))return true;return OLD_KEYS.some(k=>!!localStorage.getItem(k));}catch{return false;}}
   static migrate(s){
     if(!s)return null;const sv=s.saveVersion||s.version||0;
-    if(sv>=4)return s;
-    if(sv>=3)return{...s,saveVersion:4,version:4,customerProfiles:s.customerProfiles||{},renownTier:s.renownTier??null,kidFlags:s.kidFlags||{},recentRudeTypes:s.recentRudeTypes||[],maintenance:{...(s.maintenance||{}),dirtSpots:s.maintenance?.dirtSpots||[],activity:s.maintenance?.activity||{},recentZones:s.maintenance?.recentZones||[]}};
-    if(sv>=2)return{...s,saveVersion:4,version:4,playTimeSeconds:s.playTimeSeconds||0,calendar:s.calendar||null,rent:s.rent||null,customerHistory:s.customerHistory||[],customerProfiles:{},debts:s.debts||{},recentRudeTypes:s.recentRudeTypes||[],renownTier:null,kidFlags:{}};
-    return{saveVersion:4,version:4,day:s.day||1,gold:s.gold??100,reputation:s.reputation??0,inventory:s.inventory,weaponHistory:s.weaponHistory||[],knightPurchase:s.knightPurchase||null,flags:s.flags||{},controlled:s.controlled||'younger',players:s.players,time:{minute:360,speed:1},shopOpen:false,display:{slots:[null,null,null,null,null]},orders:{orders:[],nextId:1},maintenance:{cleanliness:88,dirtSpots:[],roles:{older:'idle',younger:'idle'},condition:'normal',activity:{},recentZones:[]},activeEvent:s.activeEvent||null,nextEvent:s.nextEvent||null,tutorialSeen:s.tutorialSeen||false,playTimeSeconds:0,customerHistory:[],customerProfiles:{},debts:{},recentRudeTypes:[],renownTier:null,kidFlags:{}};
+    const ensureDisplay=d=>{const slots=Array.from({length:6},(_,i)=>d?.slots?.[i]||null);return{capacity:6,slots};};
+    const base5=x=>({...x,saveVersion:5,version:5,display:ensureDisplay(x.display),doorReservation:x.doorReservation||{holder:null,direction:null,queue:[]}});
+    if(sv>=5)return base5(s);
+    if(sv>=4)return base5(s);
+    if(sv>=3)return base5({...s,customerProfiles:s.customerProfiles||{},renownTier:s.renownTier??null,kidFlags:s.kidFlags||{},recentRudeTypes:s.recentRudeTypes||[],maintenance:{...(s.maintenance||{}),dirtSpots:s.maintenance?.dirtSpots||[],activity:s.maintenance?.activity||{},recentZones:s.maintenance?.recentZones||[]}});
+    if(sv>=2)return base5({...s,playTimeSeconds:s.playTimeSeconds||0,calendar:s.calendar||null,rent:s.rent||null,customerHistory:s.customerHistory||[],customerProfiles:{},debts:s.debts||{},recentRudeTypes:s.recentRudeTypes||[],renownTier:null,kidFlags:{}});
+    return base5({day:s.day||1,gold:s.gold??100,reputation:s.reputation??0,inventory:s.inventory,weaponHistory:s.weaponHistory||[],knightPurchase:s.knightPurchase||null,flags:s.flags||{},controlled:s.controlled||'younger',players:s.players,time:{minute:360,speed:1},shopOpen:false,display:{slots:[]},orders:{orders:[],nextId:1},maintenance:{cleanliness:88,dirtSpots:[],roles:{older:'idle',younger:'idle'},condition:'normal',activity:{},recentZones:[]},activeEvent:s.activeEvent||null,nextEvent:s.nextEvent||null,tutorialSeen:s.tutorialSeen||false,playTimeSeconds:0,customerHistory:[],customerProfiles:{},debts:{},recentRudeTypes:[],renownTier:null,kidFlags:{}});
   }
   static loadLegacy(){try{for(const k of OLD_KEYS){const raw=localStorage.getItem(k);if(raw)return this.migrate(JSON.parse(raw));}}catch{}return null;}
   static load(id='auto'){try{const raw=localStorage.getItem(this.key(id));if(raw){const parsed=JSON.parse(raw);return this.migrate(parsed.data??parsed);}if(id==='auto')return this.loadLegacy();return null;}catch{return null;}}

@@ -1,5 +1,6 @@
 import { MATERIAL_NAMES, QUALITY, stationName } from '../data/GameData.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
+import { MessageManager } from '../systems/MessageManager.js';
 
 const TARGETS={heat:.68,quench:.40,grind:.52,bend:.64,string:.48,test:.72,wood:.36,assemble:.56,leather:.44};
 const RING_KINDS=new Set(['hammer','rivet']);
@@ -8,19 +9,25 @@ const fmtPlay=s=>{s=Math.max(0,Math.floor(s||0));const h=Math.floor(s/3600),m=Ma
 const fmtSaved=iso=>{if(!iso)return'';try{const d=new Date(iso);return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;}catch{return'';}};
 
 export class UIManager {
-  constructor(){this.modal=null;this.toast=null;this.toastT=0;this.craft=null;this.pause=null;this.shop=null;this.perfectFlash=0;}
-  showToast(text,seconds=2.4){this.toast=text;this.toastT=seconds;}
+  constructor(){this.modal=null;this.craft=null;this.pause=null;this.shop=null;this.storage=null;this.interactionChoice=null;this.perfectFlash=0;this.messages=new MessageManager();}
+  showToast(text,seconds=2.8){return this.messages.system(text,seconds);}
+  showImportant(text,seconds=3.8){return this.messages.important(text,seconds);}
+  showLocation(text,seconds=1.4){return this.messages.locationText(text,seconds);}
   openModal(title,text,options=[{label:'확인'}],onSelect=()=>{},config={}){this.modal={title,text,options,onSelect,pauseClock:config.pauseClock!==false,focus:0};}
   closeModal(){this.modal=null;}
   beginCraft(stage,speed,onDone,meta={}){this.craft={stage:{...stage},speed,onDone,meta,t:0,attempts:0,scores:[],phase:0,radius:44,perfectHits:0,resumeGrace:0};}
   openPause(){if(!this.pause)this.pause={page:'main',slide:0,confirm:null,focus:0};}
   closePause(){if(this.craft)this.craft.resumeGrace=.38;this.pause=null;}
   isPauseOpen(){return!!this.pause;}
-  isWorldPaused(){return!!(this.pause||this.modal||this.shop);}
+  isWorldPaused(){return!!(this.pause||this.modal||this.shop||this.storage||this.interactionChoice);}
   openMaterialShop(config){this.shop={...config,qty:{iron:1,wood:1,leather:1},focusRow:0};}
   closeShop(){this.shop=null;}
+  openStorage(config){this.storage={...config,focus:0,scroll:0,pageSize:8};}
+  closeStorage(){this.storage=null;}
+  openInteractionChoice(options,onSelect){this.interactionChoice={options:options.slice(0,3),focus:0,onSelect};}
+  closeInteractionChoice(){this.interactionChoice=null;}
   update(dt){
-    if(this.toastT>0){this.toastT-=dt;if(this.toastT<=0)this.toast=null;}
+    this.messages.update(dt);
     if(this.perfectFlash>0)this.perfectFlash-=dt;
     if(this.pause){this.pause.slide=Math.min(1,this.pause.slide+dt*7);return;}
     const c=this.craft;if(!c)return;if(c.resumeGrace>0){c.resumeGrace-=dt;return;}c.t+=dt;const diff=c.stage.difficulty||1;c.phase+=dt*(1.05+.22*diff)*c.speed;
@@ -28,7 +35,9 @@ export class UIManager {
   }
   handleInput(input,sound,scene){
     if(this.pause)return this.handlePauseInput(input,sound,scene);
+    if(this.storage)return this.handleStorageInput(input,sound,scene);
     if(this.shop)return this.handleShopInput(input,sound,scene);
+    if(this.interactionChoice)return this.handleInteractionChoiceInput(input,sound);
     if(this.craft){if(input.hit('KeyE','Space','Enter')){if(this.craft.resumeGrace<=0)this.hitCraft(sound);return true;}return true;}
     if(!this.modal)return false;
     if(input.hit('Escape')){this.modal=null;return true;}
@@ -71,6 +80,39 @@ export class UIManager {
       if(this.inRect(p,{x:488,y:y+13,w:70,h:28})){s.focusRow=row;const amount=s.qty[t];if(amount>mx){this.showToast('보유 Gold가 부족하다.');return;}const ok=s.onBuy(t,amount);if(ok){sound.coin();s.qty[t]=1;}return;}
     });return true;
   }
+  handleInteractionChoiceInput(input,sound){
+    const c=this.interactionChoice;if(!c)return false;const n=c.options.length;
+    if(input.hit('Escape')){this.closeInteractionChoice();return true;}
+    if(input.hit('ArrowUp','ArrowLeft')){c.focus=(c.focus-1+n)%n;return true;}
+    if(input.hit('ArrowDown','ArrowRight','Tab')){c.focus=(c.focus+1)%n;return true;}
+    if(input.hit('Enter','Space','KeyE')){const opt=c.options[c.focus],cb=c.onSelect;this.closeInteractionChoice();sound.tone(330,.04,'square',.015);cb?.(opt,c.focus);return true;}
+    if(input.click){const rects=this.interactionChoiceRects(n);for(let i=0;i<n;i++)if(this.inRect(input.click,rects[i])){c.focus=i;const opt=c.options[i],cb=c.onSelect;this.closeInteractionChoice();cb?.(opt,i);return true;}}
+    return true;
+  }
+  interactionChoiceRects(n){const w=230,h=22,x=205,y=238;return Array.from({length:n},(_,i)=>({x,y:y+i*24,w,h}));}
+  handleStorageInput(input,sound){
+    const s=this.storage;if(!s)return false;const items=s.getItems?.()||[],n=items.length;if(input.hit('Escape')){this.closeStorage();return true;}
+    if(!n)return true;
+    const page=s.pageSize||8,clampFocus=()=>{s.focus=Math.max(0,Math.min(n-1,s.focus));s.scroll=Math.max(0,Math.min(s.focus,s.scroll));if(s.focus>=s.scroll+page)s.scroll=s.focus-page+1;};
+    if(input.hit('ArrowUp')){s.focus=(s.focus-1+n)%n;clampFocus();return true;}if(input.hit('ArrowDown')){s.focus=(s.focus+1)%n;clampFocus();return true;}
+    if(input.hit('PageUp')){s.focus=Math.max(0,s.focus-page);clampFocus();return true;}if(input.hit('PageDown')){s.focus=Math.min(n-1,s.focus+page);clampFocus();return true;}
+    if(input.wheel){s.focus=Math.max(0,Math.min(n-1,s.focus+(input.wheel>0?1:-1)));clampFocus();return true;}
+    if(input.hit('Enter','Space','KeyE')){const item=items[s.focus];if(item){s.onDisplay?.(item.uid);const after=s.getItems?.()||[];s.focus=Math.max(0,Math.min(s.focus,after.length-1));s.scroll=Math.max(0,Math.min(s.scroll,Math.max(0,after.length-page)));}return true;}
+    if(input.click){for(const [i,r] of this.storageRowRects(page).entries()){if(this.inRect(input.click,r)){const idx=s.scroll+i;if(idx<n){s.focus=idx;const item=items[idx];if(item)s.onDisplay?.(item.uid);}return true;}}}
+    return true;
+  }
+  storageRowRects(page=8){return Array.from({length:page},(_,i)=>({x:92,y:118+i*24,w:456,h:21}));}
+  renderNotifications(ctx){
+    const items=this.messages.visible(3);let y=98;for(const m of items){const w=224,x=640-w-10;ctx.fillStyle=m.type==='important'?'#3d2617ee':'#1d1510e8';ctx.fillRect(x,y,w,22);ctx.fillStyle=m.type==='important'?'#d9a442':'#9a7046';ctx.fillRect(x,y,3,22);ctx.fillStyle='#f2dfbd';ctx.font='8px "Malgun Gothic", system-ui, sans-serif';ctx.textBaseline='middle';const text=m.text.length>37?m.text.slice(0,36)+'…':m.text;ctx.fillText(text,x+9,y+11);y+=25;}
+  }
+  renderLocation(ctx,m){const a=Math.max(0,Math.min(1,m.remaining/Math.max(.01,m.duration)));ctx.save();ctx.globalAlpha=Math.min(1,a*1.6);ctx.fillStyle='#17100dc8';ctx.fillRect(252,58,136,20);ctx.fillStyle='#e8c982';ctx.font='bold 9px "Malgun Gothic", system-ui, sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(m.text,320,68);ctx.restore();ctx.textAlign='left';}
+  renderInteractionChoice(ctx){const c=this.interactionChoice,rects=this.interactionChoiceRects(c.options.length);ctx.fillStyle='#17100df0';ctx.fillRect(197,229,246,18+c.options.length*24);ctx.fillStyle='#c99755';ctx.fillRect(197,229,3,18+c.options.length*24);ctx.fillStyle='#f0d7a9';ctx.font='8px "Malgun Gothic", system-ui, sans-serif';ctx.fillText('E 상호작용 · ↑↓ 선택 · ESC 취소',207,240);c.options.forEach((o,i)=>{const r=rects[i];ctx.fillStyle=i===c.focus?'#49321f':'#24170f';ctx.fillRect(r.x,r.y,r.w,r.h);ctx.strokeStyle=i===c.focus?'#f0c665':'#77563a';ctx.strokeRect(r.x+.5,r.y+.5,r.w-1,r.h-1);ctx.fillStyle='#f1d8aa';ctx.fillText(`${i===c.focus?'▶ ':''}${o.label}`,r.x+8,r.y+13);});}
+  renderStorage(ctx,scene){
+    const s=this.storage,items=s.getItems?.()||[],page=s.pageSize||8,maxStart=Math.max(0,items.length-page);s.scroll=Math.max(0,Math.min(s.scroll,maxStart));if(s.focus<s.scroll)s.scroll=s.focus;if(s.focus>=s.scroll+page)s.scroll=Math.max(0,s.focus-page+1);
+    ctx.fillStyle='#000a';ctx.fillRect(0,0,640,360);this.panel(ctx,70,48,500,288);ctx.fillStyle='#f5dca7';ctx.font='bold 13px "Malgun Gothic", system-ui, sans-serif';ctx.fillText('무기 창고 · 전체 완성품',92,70);const m=scene.inventory.materials;ctx.fillStyle='#cdb58c';ctx.font='8px "Malgun Gothic", system-ui, sans-serif';ctx.fillText(`철 ${m.iron} · 목재 ${m.wood} · 가죽 ${m.leather} · 보유 무기 ${items.length} · 진열 ${scene.display.count()}/${scene.display.slots.length}`,92,90);ctx.fillText('↑↓ 이동 · PgUp/PgDn · Enter 진열 · ESC 닫기',92,104);
+    const rects=this.storageRowRects(page);for(let i=0;i<page;i++){const idx=s.scroll+i,r=rects[i],item=items[idx];if(!item)continue;ctx.fillStyle=idx===s.focus?'#4b3522':'#241812';ctx.fillRect(r.x,r.y,r.w,r.h);ctx.strokeStyle=idx===s.focus?'#f0c665':'#715238';ctx.strokeRect(r.x+.5,r.y+.5,r.w-1,r.h-1);const q=QUALITY[item.quality]?.name||item.quality,trait=item.trait?.name?`${item.trait.name} `:'',maker=item.makerName||'';const price=Math.round((item.basePrice||0)*(QUALITY[item.quality]?.multiplier||1)*(item.trait?.multiplier||1));ctx.fillStyle='#f2dcb4';ctx.font='8px "Malgun Gothic", system-ui, sans-serif';ctx.fillText(`${idx+1}. ${trait}${item.itemName} · ${q} · ${maker} · 약 ${price}G`,r.x+7,r.y+13);}
+    if(items.length>page){ctx.fillStyle='#b7986e';ctx.fillText(`${s.scroll+1}-${Math.min(items.length,s.scroll+page)} / ${items.length}`,490,318);}if(!items.length){ctx.fillStyle='#aa9272';ctx.font='10px "Malgun Gothic", system-ui, sans-serif';ctx.fillText('창고에 완성품이 없다.',238,205);}
+  }
   pauseMainRects(){return['continue','save','load','options','title'].map((id,i)=>({id,x:404,y:190+i*29,w:196,h:24}));}
   slotRects(mode){const slots=mode==='save'?SaveSystem.list().slice(1):SaveSystem.list();return slots.map((s,i)=>({slot:s,x:372,y:62+i*35,w:244,h:30,del:s.id!=='auto'?{x:574,y:66+i*35,w:37,h:21}:null}));}
   handlePauseInput(input,sound,scene){
@@ -85,7 +127,7 @@ export class UIManager {
       if(input.hit('Delete')&&rows[p.focus]?.slot.meta&&rows[p.focus]?.slot.id!=='auto'){const back=p.page;p.page='confirmDelete';p.confirm={slot:rows[p.focus].slot.id,back};p.focus=0;return true;}
       if(activate()){const r=rows[p.focus];if(!r)return true;if(p.page==='load'){if(!r.slot.meta){this.showToast('비어 있는 슬롯이다.');return true;}scene.loadFromSlot(r.slot.id);return true;}if(r.slot.meta){p.page='confirmOverwrite';p.confirm={slot:r.slot.id};p.focus=0;return true;}scene.saveManual(r.slot.id);this.showToast(`SAVE ${r.slot.id} 저장 완료`);return true;}
     }else if(p.page==='options'){
-      const count=4;if(input.hit('ArrowUp'))p.focus=(p.focus-1+count)%count;if(input.hit('ArrowDown'))p.focus=(p.focus+1)%count;const step=input.down?.('ShiftLeft','ShiftRight')?.10:.05;
+      const count=4;if(input.hit('ArrowUp'))p.focus=(p.focus-1+count)%count;if(input.hit('ArrowDown'))p.focus=(p.focus+1)%count;const step=input.down?.('ShiftLeft','ShiftRight')?.05:.01;
       if(p.focus===0&&input.hit('ArrowLeft'))scene.game.sound.setBGMVolume(scene.game.sound.bgmVolume-step);
       if(p.focus===0&&input.hit('ArrowRight'))scene.game.sound.setBGMVolume(scene.game.sound.bgmVolume+step);
       if(p.focus===2&&input.hit('ArrowLeft')){scene.game.sound.setSFXVolume(scene.game.sound.sfxVolume-step);scene.game.sound.tone(500,.05,'square',.03);}
@@ -102,11 +144,11 @@ export class UIManager {
     else if(['confirmOverwrite','confirmDelete','titleConfirm'].includes(p.page)){if(this.inRect(c,{x:390,y:244,w:88,h:28})){p.focus=0;}else if(this.inRect(c,{x:493,y:244,w:98,h:28})){p.focus=1;}if(p.focus===0||p.focus===1){const fake={hit:(...codes)=>codes.includes('Enter'),down:()=>false,click:null};return this.handlePauseInput(fake,sound,scene);}}
     return true;
   }
-  render(ctx,scene){this.renderHUD(ctx,scene);if(this.toast)this.renderToast(ctx,this.toast);if(this.modal)this.renderModal(ctx,this.modal);if(this.craft)this.renderCraft(ctx,this.craft);if(this.shop)this.renderShopUI(ctx,scene);if(this.pause)this.renderPause(ctx,scene);if(this.perfectFlash>0)this.renderPerfectFlash(ctx);}
+  render(ctx,scene){this.renderHUD(ctx,scene);this.renderNotifications(ctx);if(this.messages.location)this.renderLocation(ctx,this.messages.location);if(this.modal)this.renderModal(ctx,this.modal);if(this.craft)this.renderCraft(ctx,this.craft);if(this.shop)this.renderShopUI(ctx,scene);if(this.storage)this.renderStorage(ctx,scene);if(this.interactionChoice)this.renderInteractionChoice(ctx);if(this.pause)this.renderPause(ctx,scene);if(this.perfectFlash>0)this.renderPerfectFlash(ctx);}
   renderHUD(ctx,s){
     ctx.fillStyle='#21160f';ctx.fillRect(0,0,640,31);ctx.fillStyle='#6f4d2f';ctx.fillRect(0,28,640,3);ctx.textBaseline='middle';
     ctx.font='bold 9px "Malgun Gothic", system-ui, sans-serif';ctx.fillStyle='#f2d9a6';ctx.fillText(s.calendar?.format(true)||`DAY ${s.day}`,8,10);ctx.font='bold 14px "Malgun Gothic", system-ui, sans-serif';ctx.fillStyle='#fff0c6';ctx.fillText(s.time.format(),8,22);
-    ctx.font='bold 10px "Malgun Gothic", system-ui, sans-serif';ctx.fillStyle=s.shopOpen?'#a8d18f':'#d7a17b';ctx.fillText(s.shopOpen?'OPEN':'CLOSED',78,21);ctx.fillStyle='#f2d9a6';ctx.fillText(`G ${s.economy.gold}`,148,14);ctx.fillText(`명성 ${s.economy.reputation}`,218,14);ctx.fillText(`진열 ${s.display.count()}/5`,298,14);ctx.fillText(`청결 ${Math.round(s.maintenance.cleanliness)}`,371,14);ctx.fillStyle='#e8bd72';ctx.fillText(`조작 ${s.controlled==='older'?'형':'동생'} · ${s.floor==='loft'?'2층':'1층'} [Q]`,455,14);
+    ctx.font='bold 10px "Malgun Gothic", system-ui, sans-serif';ctx.fillStyle=s.shopOpen?'#a8d18f':'#d7a17b';ctx.fillText(s.shopOpen?'OPEN':'CLOSED',78,21);ctx.fillStyle='#f2d9a6';ctx.fillText(`G ${s.economy.gold}`,148,14);ctx.fillText(`명성 ${s.economy.reputation}`,218,14);ctx.fillText(`진열 ${s.display.count()}/${s.display.slots.length}`,298,14);ctx.fillText(`청결 ${Math.round(s.maintenance.cleanliness)}`,371,14);ctx.fillStyle='#e8bd72';ctx.fillText(`조작 ${s.controlled==='older'?'형':'동생'} · ${s.floor==='loft'?'2층':'1층'} [Q]`,455,14);
     ctx.fillStyle='#2f2016';ctx.fillRect(6,35,365,18);ctx.fillStyle='#d9bd8b';ctx.font='9px "Malgun Gothic", system-ui, sans-serif';ctx.fillText(`소식 · ${s.events.activeEvent?.title||'평온한 하루'}`,12,44);if(s.broomEquipped){ctx.fillStyle='#f0c56e';ctx.fillText('빗자루 장착',378,44);}if(s.orders.openOrders().length){ctx.fillStyle='#3a2417';ctx.fillRect(486,35,146,18);ctx.fillStyle='#e8c285';ctx.fillText(`미납 주문 ${s.orders.openOrders().length}건`,494,44);}
   }
   panel(ctx,x,y,w,h){ctx.fillStyle='#281a12';ctx.fillRect(x-3,y-3,w+6,h+6);ctx.fillStyle='#8c653d';ctx.fillRect(x,y,w,h);ctx.fillStyle='#ead3a4';ctx.fillRect(x+3,y+3,w-6,h-6);ctx.fillStyle='#563922';ctx.fillRect(x+6,y+6,w-12,h-12);}
@@ -133,7 +175,7 @@ export class UIManager {
     const p=this.pause,slide=p.slide,x=640-282*slide;ctx.fillStyle=`rgba(0,0,0,${.38*slide})`;ctx.fillRect(0,0,640,360);ctx.fillStyle='#1e130e';ctx.fillRect(x,0,282,360);ctx.fillStyle='#795334';ctx.fillRect(x+4,0,4,360);ctx.fillStyle='#3b281b';ctx.fillRect(x+8,0,274,360);ctx.fillStyle='#d1a15c';ctx.fillRect(x+18,16,244,2);ctx.fillStyle='#f0d8aa';ctx.font='bold 13px "Malgun Gothic", system-ui, sans-serif';ctx.fillText(p.page==='main'?'일시정지':p.page==='save'?'저장하기':p.page==='load'?'불러오기':p.page==='options'?'옵션':'확인',x+24,37);
     if(p.page==='main')this.renderPauseMain(ctx,scene,x);else if(p.page==='save'||p.page==='load')this.renderSlotPage(ctx,p.page,x);else if(p.page==='options')this.renderOptions(ctx,scene,x);else this.renderConfirm(ctx,p,x);
   }
-  renderPauseMain(ctx,s,x){const rent=s.rent.nextDue(s.calendar),m=s.inventory.materials,ren=s.renownInfo?.()||{name:'무명의 대장간',remaining:0,next:null};ctx.fillStyle='#d8c29c';ctx.font='9px "Malgun Gothic", system-ui, sans-serif';ctx.fillText(s.calendar.format(),x+24,61);ctx.fillStyle='#fff0c7';ctx.font='bold 17px "Malgun Gothic", system-ui, sans-serif';ctx.fillText(s.time.format(),x+24,82);ctx.font='bold 10px "Malgun Gothic", system-ui, sans-serif';ctx.fillStyle=s.shopOpen?'#a5d091':'#d9a083';ctx.fillText(s.shopOpen?'대장간 OPEN':'대장간 CLOSED',x+24,101);ctx.fillStyle='#d8c29c';ctx.font='9px "Malgun Gothic", system-ui, sans-serif';ctx.fillText(`Gold ${s.economy.gold}G · 명성 ${s.economy.reputation}`,x+24,119);ctx.fillStyle='#f0ca7d';ctx.fillText(`${ren.tier?.name||'무명의 대장간'}${ren.next?` · 다음 단계까지 ${ren.remaining}`:' · 최고 단계'}`,x+24,133);ctx.fillStyle='#d8c29c';ctx.font='8px "Malgun Gothic", system-ui, sans-serif';ctx.fillText(`철 ${m.iron} · 목재 ${m.wood} · 가죽 ${m.leather}`,x+24,147);ctx.fillText(`주문 ${s.orders.openOrders().length} · 진열 ${s.display.count()}/5 · 단골 ${s.regularCount?.()||0}명`,x+24,160);ctx.fillStyle='#e4bd72';ctx.fillText(`임대료 ${rent.name} · ${rent.days}일 후 · ${rent.amount}G`,x+24,174);for(const [i,r] of this.pauseMainRects().entries()){ctx.fillStyle=i===this.pause.focus?'#4a321e':'#24170f';ctx.fillRect(r.x,r.y,r.w,r.h);ctx.strokeStyle=i===this.pause.focus?'#f0c665':'#a8753f';ctx.strokeRect(r.x+.5,r.y+.5,r.w-1,r.h-1);ctx.fillStyle='#f2dcb1';ctx.font='9px "Malgun Gothic", system-ui, sans-serif';ctx.textAlign='center';const labels={continue:'게임 계속하기',save:'저장하기',load:'불러오기',options:'옵션',title:'메인 메뉴로'};ctx.fillText(`${i===this.pause.focus?'▶ ':''}${labels[r.id]}`,r.x+r.w/2,r.y+13);ctx.textAlign='left';}ctx.fillStyle='#a99270';ctx.font='8px "Malgun Gothic", system-ui, sans-serif';ctx.fillText('↑↓ 이동 · Enter 선택 · ESC 복귀',x+24,347);}
+  renderPauseMain(ctx,s,x){const rent=s.rent.nextDue(s.calendar),m=s.inventory.materials,ren=s.renownInfo?.()||{name:'무명의 대장간',remaining:0,next:null};ctx.fillStyle='#d8c29c';ctx.font='9px "Malgun Gothic", system-ui, sans-serif';ctx.fillText(s.calendar.format(),x+24,61);ctx.fillStyle='#fff0c7';ctx.font='bold 17px "Malgun Gothic", system-ui, sans-serif';ctx.fillText(s.time.format(),x+24,82);ctx.font='bold 10px "Malgun Gothic", system-ui, sans-serif';ctx.fillStyle=s.shopOpen?'#a5d091':'#d9a083';ctx.fillText(s.shopOpen?'대장간 OPEN':'대장간 CLOSED',x+24,101);ctx.fillStyle='#d8c29c';ctx.font='9px "Malgun Gothic", system-ui, sans-serif';ctx.fillText(`Gold ${s.economy.gold}G · 명성 ${s.economy.reputation}`,x+24,119);ctx.fillStyle='#f0ca7d';ctx.fillText(`${ren.tier?.name||'무명의 대장간'}${ren.next?` · 다음 단계까지 ${ren.remaining}`:' · 최고 단계'}`,x+24,133);ctx.fillStyle='#d8c29c';ctx.font='8px "Malgun Gothic", system-ui, sans-serif';ctx.fillText(`철 ${m.iron} · 목재 ${m.wood} · 가죽 ${m.leather}`,x+24,147);ctx.fillText(`주문 ${s.orders.openOrders().length} · 진열 ${s.display.count()}/${s.display.slots.length} · 단골 ${s.regularCount?.()||0}명`,x+24,160);ctx.fillStyle='#e4bd72';ctx.fillText(`임대료 ${rent.name} · ${rent.days}일 후 · ${rent.amount}G`,x+24,174);for(const [i,r] of this.pauseMainRects().entries()){ctx.fillStyle=i===this.pause.focus?'#4a321e':'#24170f';ctx.fillRect(r.x,r.y,r.w,r.h);ctx.strokeStyle=i===this.pause.focus?'#f0c665':'#a8753f';ctx.strokeRect(r.x+.5,r.y+.5,r.w-1,r.h-1);ctx.fillStyle='#f2dcb1';ctx.font='9px "Malgun Gothic", system-ui, sans-serif';ctx.textAlign='center';const labels={continue:'게임 계속하기',save:'저장하기',load:'불러오기',options:'옵션',title:'메인 메뉴로'};ctx.fillText(`${i===this.pause.focus?'▶ ':''}${labels[r.id]}`,r.x+r.w/2,r.y+13);ctx.textAlign='left';}ctx.fillStyle='#a99270';ctx.font='8px "Malgun Gothic", system-ui, sans-serif';ctx.fillText('↑↓ 이동 · Enter 선택 · ESC 복귀',x+24,347);}
   renderSlotPage(ctx,mode,x){const rows=this.slotRects(mode);for(const [i,r] of rows.entries()){const m=r.slot.meta;ctx.fillStyle=i===this.pause.focus?'#49311e':'#241811';ctx.fillRect(r.x,r.y,r.w,r.h);ctx.strokeStyle=i===this.pause.focus?'#f0c665':m?'#a87742':'#5d4737';ctx.strokeRect(r.x+.5,r.y+.5,r.w-1,r.h-1);ctx.fillStyle=m?'#f0d5a6':'#8d7a64';ctx.font='bold 8px "Malgun Gothic", system-ui, sans-serif';ctx.fillText(r.slot.label,r.x+7,r.y+9);ctx.font='7px "Malgun Gothic", system-ui, sans-serif';if(m&&!m.corrupt){ctx.fillText(`${m.date} ${m.time} · ${m.gold}G · 명성 ${m.reputation}`,r.x+7,r.y+18);ctx.fillStyle='#a99372';ctx.fillText(`${fmtPlay(m.playTimeSeconds)} · ${fmtSaved(m.savedAt)}`,r.x+7,r.y+27);}else ctx.fillText(m?.corrupt?'손상된 저장':'비어 있음',r.x+7,r.y+21);if(r.del&&m){ctx.fillStyle='#4a2921';ctx.fillRect(r.del.x,r.del.y,r.del.w,r.del.h);ctx.fillStyle='#e0b29c';ctx.textAlign='center';ctx.fillText('삭제',r.del.x+r.del.w/2,r.del.y+13);ctx.textAlign='left';}}
     ctx.fillStyle='#2a1b12';ctx.fillRect(382,318,82,22);ctx.fillStyle='#eed6aa';ctx.fillText('← 뒤로',402,332);
   }

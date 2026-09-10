@@ -1,9 +1,11 @@
 import { CUSTOMER_ARCHETYPES, CUSTOMER_NAMES, ITEMS, RUDE_TYPES, RUDE_TYPE_ORDER } from '../data/GameData.js';
 import { RenownSystem } from './RenownSystem.js';
 
-const COUNTER_POS=[{x:452,y:306},{x:478,y:306},{x:506,y:306},{x:548,y:238}];
-const BROWSE_POS=[{x:526,y:174},{x:560,y:178},{x:508,y:202},{x:568,y:214}];
-const ENTRY={x:586,y:318};
+// Customers stay on the public side of the ㄱ counter.  The staff side is
+// below/left of the horizontal plank; customers approach from the north/right.
+const COUNTER_POS=[{x:438,y:232},{x:466,y:232},{x:494,y:232},{x:558,y:214}];
+const BROWSE_POS=[{x:526,y:166},{x:562,y:170},{x:516,y:198},{x:568,y:202}];
+const ENTRY={x:590,y:318};
 const typePoolByTime=(minute,rep=0)=>{const m=minute%1440;let p=m<540?['villager','guard']:m<720?['villager','guard','hunter']:m<1020?['adventurer','villager','mercenary','hunter']:m<1260?['adventurer','mercenary','guard','hunter']:['villager','guard'];if(rep>=50)p.push('knight','mercenary');if(rep>=80)p.push('knight');return p;};
 function spawnInterval(minute,event,rep){const m=minute%1440;let base=m<540?64:m<720?49:m<1020?40:m<1260?36:62;const mult=(event?.visitMultiplier||1)*RenownSystem.visitMultiplier(rep);return Math.max(22,(base/mult)*(.72+Math.random()*.62));}
 

@@ -1,13 +1,13 @@
 {
-  "name": "blacksmith-brothers-v0.2.5b",
-  "version": "0.2.5-b",
+  "name": "blacksmith-brothers-v0.2.5c",
+  "version": "0.2.5-c",
   "private": true,
   "type": "module",
-  "description": "중세 판타지 형제 대장장이 V0.2.5b - 1층 동선/작업 안내/2층 생활공간 리디자인",
+  "description": "중세 판타지 형제 대장장이 V0.2.5c - 사용자 배치 피드백 반영 공간 레이아웃 조정 핫픽스",
   "scripts": {
     "dev": "node scripts/dev-server.mjs",
     "build": "node scripts/build.mjs",
     "preview": "node scripts/preview-server.mjs",
-    "test": "node tests/systems.test.mjs && node tests/ux.test.mjs && node tests/scene-smoke.test.mjs && node tests/layout-hotfix.test.mjs && node tests/stability-followup.test.mjs"
+    "test": "node tests/systems.test.mjs && node tests/ux.test.mjs && node tests/scene-smoke.test.mjs && node tests/layout-hotfix.test.mjs && node tests/spatial-grammar.test.mjs"
   }
 }

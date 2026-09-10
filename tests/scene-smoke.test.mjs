@@ -30,4 +30,4 @@ s.shopOpen=true;s.economy.gold=777;s.economy.reputation=27;s.inventory.materials
 
 // New depth-sorted renderer must render without runtime errors.
 restored.render(ctx);
-console.log('✓ V0.2.5b scene integration/early-sleep/renown tests passed');
+console.log('✓ V0.2.5c scene integration/early-sleep/renown tests passed');

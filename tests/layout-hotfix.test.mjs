@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { STATIONS, SHOP_COLLIDERS, INTERACTION_POINTS, LOFT_STATIONS } from '../src/data/GameData.js';
+import { STATIONS, SHOP_COLLIDERS, INTERACTION_POINTS, LOFT_STATIONS, LOFT_INTERACTION_POINTS, LOFT_BOUNDS, LOFT_COLLIDERS, LOFT_ZONES } from '../src/data/GameData.js';
 import { WorldSystem } from '../src/systems/WorldSystem.js';
 import { GameScene } from '../src/scenes/GameScene.js';
 
@@ -16,6 +16,8 @@ assert.ok(counterLeg.x >= STATIONS.counter.x+STATIONS.counter.w-40,'L-counter ve
 
 // Every interaction point used by the new layout must still be reachable.
 const world=new WorldSystem();
+const loftWorld=new WorldSystem({bounds:LOFT_BOUNDS,colliders:LOFT_COLLIDERS,zones:LOFT_ZONES});
+for(const [id,p] of Object.entries(LOFT_INTERACTION_POINTS))assert.ok(loftWorld.isWalkable(p.x,p.y,null,7),`${id} loft interaction point must be walkable`);
 for(const id of ['stairs','fuel','forge','anvil','water','bench','storage','grind','display','counter','broom','sign','door']){
   const p=INTERACTION_POINTS[id];
   assert.ok(world.isWalkable(p.x,p.y,null,7),`${id} interaction point must be walkable`);
@@ -41,7 +43,7 @@ assert.ok(Math.hypot(s.controlledPlayer().x-INTERACTION_POINTS.stairs.x,s.contro
 s.stairCooldown=0;
 s.goUpstairs();
 assert.equal(s.floor,'loft');
-assert.ok(Math.hypot(s.controlledPlayer().x-(LOFT_STATIONS.stairsDown.x+LOFT_STATIONS.stairsDown.w/2),s.controlledPlayer().y-(LOFT_STATIONS.stairsDown.y+LOFT_STATIONS.stairsDown.h/2))>55,'upstairs spawn must clear the landing trigger');
+assert.ok(Math.hypot(s.controlledPlayer().x-LOFT_INTERACTION_POINTS.stairsDown.x,s.controlledPlayer().y-LOFT_INTERACTION_POINTS.stairsDown.y)>55,'upstairs spawn must clear the landing trigger');
 
 // Merchant must visibly cross the door before settling inside.
 s.stairCooldown=0;s.goDownstairs();
@@ -58,4 +60,4 @@ assert.equal(objective.target,'forge');assert.match(objective.current,/가열/);
 while(s.crafting.active?.stageIndex===0)s.finishCraftStage(85,{perfectHits:0,stagePerfect:false});
 objective=s.currentObjective();assert.equal(objective.target,'anvil');assert.match(objective.current,/성형/);
 
-console.log('✓ V0.2.5b layout/stair/merchant/tracker tests passed');
+console.log('✓ V0.2.5c layout/stair/merchant/tracker tests passed');
